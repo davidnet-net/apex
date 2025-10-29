@@ -1,8 +1,8 @@
 services:
     sveltekit:
         build: .
-        container_name: home-frontend
+        container_name: apex-frontend
         ports:
-            - "2002:3000"
+            - "2003:3000"
         restart: unless-stopped
         dns: 192.168.1.141
