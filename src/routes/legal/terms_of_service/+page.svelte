@@ -64,7 +64,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<FlexWrapper height="50%" width="100%" justifycontent="flex-start" gap="var(--token-space-1);">
-		<h1 style="font-size: 2rem">Terms of Service</h1>
+		<h1 style="font-size: 3rem">Terms of Service</h1>
 		<span style="color: var(--token-color-text-default-tertiary);">
 			Last updated: {lastUpdated ? formatDateWithUTCOffset(lastUpdated) : "Loading..."}
 		</span>
