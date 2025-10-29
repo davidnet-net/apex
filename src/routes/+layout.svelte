@@ -60,7 +60,7 @@
 {#if fontsLoaded}
 	<nav id="main-nav">
 		<div class="nav-left">
-			<LinkIconButton icon="apps" alt="Davidnet Home" href="https://home.davidnet.net" appearance="subtle" /><a href="/">Kanban</a>
+			<LinkIconButton icon="apps" alt="Davidnet Home" href="https://home.davidnet.net" appearance="subtle" /><a href="/">Davidnet</a>
 		</div>
 		<div class="nav-center">Davidnet</div>
 		<div class="nav-right">
