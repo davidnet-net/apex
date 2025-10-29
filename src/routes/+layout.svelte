@@ -7,7 +7,6 @@
 		FlexWrapper,
 		Avatar,
 		Loader,
-		IconButton,
 		getSessionInfo, isAuthenticated, refreshAccessToken,
 
 		LinkIconButton
@@ -20,7 +19,6 @@
 	let { children } = $props();
 
 	let correlationID = crypto.randomUUID();
-	let authed = $state(false);
 	let si: SessionInfo | null = $state(null);
 
 	let fontsLoaded = $state(false);
@@ -36,11 +34,12 @@
 		const initloader = document.getElementById("initloader");
 		if (initloader) initloader.remove();
 		try {
+			refreshAccessToken(correlationID, true, false);
 			si = await getSessionInfo(correlationID, true);
 
 			setInterval(
 				() => {
-					refreshAccessToken(correlationID, false, false);
+					refreshAccessToken(correlationID, true, false);
 				},
 				12 * 60 * 1000
 			);
