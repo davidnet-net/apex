@@ -58,7 +58,7 @@
 {#if fontsLoaded}
 	<nav id="main-nav">
 		<div class="nav-left">
-			<IconButton icon="arrow_back" alt="Go back" onClick={()=> {window.history.back();}} appearance="subtle" /><a href="/">Davidnet</a>
+			<LinkIconButton icon="apps" alt="Davidnet Home" href="https://home.davidnet.net" appearance="subtle" /><a href="/">Kanban</a>
 		</div>
 		<div class="nav-center">Davidnet</div>
 		<div class="nav-right">
