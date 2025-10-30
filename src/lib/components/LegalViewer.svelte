@@ -151,12 +151,17 @@
 	}
 
 	:global(.markdown a) {
-		color: var(--token-color-accent-default);
+		color: var(--token-color-text-default-normal);
+		text-decoration: underline;
+	}
+
+	:global(.markdown a:hover) {
+		color: var(--token-color-text-default-tertiary);
 		text-decoration: underline;
 	}
 
 	:global(.markdown pre) {
-		background-color: var(--token-color-surface-muted);
+		background-color: var(--token-color-surface-sunken);
 		padding: 1rem;
 		overflow-x: auto;
 		border-radius: 0.5rem;
@@ -164,7 +169,7 @@
 	}
 
 	:global(.markdown code) {
-		background-color: var(--token-color-surface-muted);
+		background-color: var(--token-color-surface-sunken);
 		padding: 0.2rem 0.4rem;
 		border-radius: 0.3rem;
 		font-family: "Fira Code", monospace;
@@ -172,7 +177,7 @@
 
 	:global(.markdown hr) {
 		border: none;
-		border-top: 1px solid var(--token-color-border-muted);
+		border-top: 1px solid var(--token-color-text-default-tertiary);
 		margin: 2rem 0;
 	}
 </style>
