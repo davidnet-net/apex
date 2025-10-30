@@ -31,7 +31,6 @@ conjunction with these Terms:
 - [Cookies](/legal/cookies)
 - [Licenses](/legal/licenses)
 - [Acceptable Use Policy](/legal/acceptable_use_policy)
-- [Contact Us](/help/)
 - [Security Policy](/legal/security_policy)
 
 ---
@@ -58,11 +57,9 @@ you confirm that you are legally capable of forming a binding contract.
 
 - You retain ownership and responsibility for any Usercontent you upload to the
   Service.
-- By uploading or sharing Usercontent, you grant the Service the right to store
-  and display it solely to provide the Service.
+- By uploading or sharing Usercontent, you grant the Service the right to store, display, delete and moderate it solely to provide the Service.
 - The Service is not responsible for Usercontent uploaded by you or other Users.
-- You are solely responsible for ensuring that your Usercontent does not violate
-  laws or third-party rights.
+- You are solely responsible for ensuring that your Usercontent does not violate laws or third-party rights.
 
 ---
 
