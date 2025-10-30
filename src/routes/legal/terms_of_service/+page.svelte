@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Button, FlexWrapper, IconButton, Link Button, LinkIconButton, Space, formatDateWithUTCOffset } from "@davidnet/svelte-ui";
+	import { Button, FlexWrapper, IconButton, LinkButton, LinkIconButton, Space, formatDateWithUTCOffset } from "@davidnet/svelte-ui";
 	import { marked } from "marked";
 	import document from "$lib/legal/terms_of_service.md?raw";
 
