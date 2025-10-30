@@ -19,16 +19,16 @@
 <div style="min-height: 100vh">
 	<FlexWrapper height="100%" width="100%">
 		<h1 class="hero-title">Welcome to Davidnet</h1>
-		<h1 class="hero-subtitle">Collaborate Smarter. While protecting Your privacy.</h1>
+		<h1 class="hero-subtitle">Manage & collaborate Smarter. While protecting Your privacy.</h1>
 		<Space height="var(--token-space-5)" />
-		<Button iconbefore="arrow_downward" onClick={scrollDown}>Learn More</Button>
+		<Button iconbefore="arrow_downward" onClick={scrollDown}>Learn more</Button>
 	</FlexWrapper>
 </div>
 <div style="min-height: 100vh">
 	<FlexWrapper height="100%" width="100%" justifycontent="flex-start">
 		<h1 style="text-align: center;">Our teamwork or solo tools</h1>
 		<FlexWrapper alignitems="flex-start" width="80%">
-			<FlexWrapper gap="var(--token-space-3)" justifycontent={width > 600 ? "center" : "space-evenly"} direction="row" wrap="wrap">
+			<FlexWrapper width="100%" gap="var(--token-space-3)" justifycontent={width > 600 ? "center" : "space-evenly"} direction="row" wrap="wrap">
 				<a class="option" href="https://kanban.davidnet.net">
 					<FlexWrapper width="100%" height="100%" gap="var(--token-space-2)">
 						<Icon size="4rem" icon="view_kanban" />
@@ -55,12 +55,25 @@
 				</a>
 			</FlexWrapper>
 			<Space height="var(--token-space-3)" />
-			<p style="text-align: center; color: var(--token-color-text-default-tertiary);">
-				You need to have an Davidnet Account to access these tools.
-			</p>
-			<Space height="var(--token-space-3)" />
-			<BlockNote appearance="error" title="Work in progress">Some services or apps are still in work in progress and cannot be accessed.</BlockNote>
+
+			<FlexWrapper width="100%" justifycontent="center">
+				<Space height="var(--token-space-3)" />
+				<p style="text-align: center; color: var(--token-color-text-default-tertiary);">
+					You need to have an Davidnet Account to access these tools.
+				</p>
+				<BlockNote appearance="error" title="Work in progress"
+					>Some services or apps are still in work in progress and cannot be accessed.</BlockNote
+				>
+			</FlexWrapper>
 		</FlexWrapper>
+		<Space height="20vh" />
+		<h2 style="text-align: center;">All privacy friendly</h2>
+		<div style="text-align: center; line-height: 1.5; max-width: 75%;">
+			At Davidnet, we prioritize your privacy. We collect as minimal data as possible to provide our tools and services. And we are starting to
+			work on e2e encryption for all tools and services so your data stays confidential.
+		</div>
+		<Space height="var(--token-space-3)" />
+		<Button iconbefore="arrow_downward" onClick={scrollDown}>Explore more</Button>
 	</FlexWrapper>
 </div>
 
@@ -75,7 +88,7 @@
 		-webkit-text-fill-color: transparent;
 	}
 	.hero-subtitle {
-		font-size: 1.8rem;
+		font-size: 1.5rem;
 		text-align: center;
 		margin: 0;
 	}
