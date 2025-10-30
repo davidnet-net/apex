@@ -62,4 +62,4 @@ When using, copying, or redistributing any part of Davidnet projects or third-pa
 ---
 
 ## 5. Contact
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

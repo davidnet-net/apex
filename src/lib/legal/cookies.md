@@ -68,4 +68,4 @@ Since Davidnet uses only essential and preference-based storage, no consent bann
 
 ## 7. Contact
 
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

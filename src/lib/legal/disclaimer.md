@@ -62,4 +62,4 @@ The content and materials provided on Davidnet (the “Service”) are for gener
 
 ## 8. Contact
 
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

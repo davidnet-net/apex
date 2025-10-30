@@ -120,4 +120,4 @@ of these Terms.
 
 ## 10. Contact
 
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

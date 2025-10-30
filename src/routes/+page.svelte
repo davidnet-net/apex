@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BlockNote, Button, FlexWrapper, Icon, Space } from "@davidnet/svelte-ui";
+	import { BlockNote, Button, FlexWrapper, Icon, LinkButton, Space } from "@davidnet/svelte-ui";
 	import { onDestroy } from "svelte";
 
 	function scrollDown() {
@@ -21,6 +21,8 @@
 		<h1 class="hero-title">Welcome to Davidnet</h1>
 		<h1 class="hero-subtitle">Manage & collaborate Smarter. While protecting Your privacy.</h1>
 		<Space height="var(--token-space-5)" />
+		<LinkButton appearance="primary" href="https://home.davidnet.net">Get started</LinkButton>
+		<Space height="var(--token-space-2)" />
 		<Button iconbefore="arrow_downward" onClick={scrollDown}>Learn more</Button>
 	</FlexWrapper>
 </div>

@@ -104,4 +104,4 @@ We do not knowingly collect personal data from children.
 
 ## 10. Contact
 
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

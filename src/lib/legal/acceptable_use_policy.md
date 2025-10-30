@@ -58,4 +58,4 @@ If you encounter abuse, illegal activity, or violations of this Policy, please r
 
 ## 7. Contact
 
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).

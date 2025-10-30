@@ -62,5 +62,4 @@ By using the Service, you agree to this Policy.
 ---
 
 ## 8. Contact
-
-[More info about contacting us](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help/contact).
