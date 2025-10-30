@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Button, FlexWrapper, IconButton, LinkIconButton, Space, formatDateWithUTCOffset } from "@davidnet/svelte-ui";
+	import { Button, FlexWrapper, IconButton, Link Button, LinkIconButton, Space, formatDateWithUTCOffset } from "@davidnet/svelte-ui";
 	import { marked } from "marked";
 	import document from "$lib/legal/terms_of_service.md?raw";
 
@@ -94,6 +94,7 @@
 				<IconButton onClick={() => (showraw = !showraw)} icon={showraw ? "raw_off" : "raw_on"} alt="View raw version" />
 				<IconButton onClick={() => downloadMarkdown()} icon="download" alt="Download" />
                 <LinkIconButton href={"https://github.com/davidnet-net/apex/commits/main/" + githubpath} alt="History" icon="history"/>    
+<LinkButton iconBefore="policy " href="/legal" >Policies</LinkButton>
                 </FlexWrapper>
 			<Space height="var(--token-space-6)" />
 		</FlexWrapper>
