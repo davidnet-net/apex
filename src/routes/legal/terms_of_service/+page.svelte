@@ -94,7 +94,7 @@
 				<IconButton onClick={() => (showraw = !showraw)} icon={showraw ? "raw_off" : "raw_on"} alt="View raw version" />
 				<IconButton onClick={() => downloadMarkdown()} icon="download" alt="Download" />
                 <LinkIconButton href={"https://github.com/davidnet-net/apex/commits/main/" + githubpath} alt="History" icon="history"/>    
-<LinkButton iconBefore="policy " href="/legal" >Policies</LinkButton>
+<LinkButton iconbefore="policy " href="/legal" >Policies</LinkButton>
                 </FlexWrapper>
 			<Space height="var(--token-space-6)" />
 		</FlexWrapper>
