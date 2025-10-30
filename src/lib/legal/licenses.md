@@ -39,6 +39,7 @@ Davidnet uses several third-party open-source libraries, tools, and assets. Thes
 
 **Note:** If we missed something please let us know [here](https://davidnet.net/help).
 
+
 ---
 
 ## 3. How to Comply
