@@ -1,6 +1,7 @@
 # Privacy Policy
 
-Davidnet respects your privacy and is committed to protecting your personal data. This Privacy Policy explains what information we collect, why we collect it, and how we use it.
+Davidnet respects your privacy and is committed to protecting your personal data.  
+This Privacy Policy explains what information we collect, why we collect it, and how we use it.
 
 By using the Service, you agree to the collection and use of information in accordance with this policy.
 
@@ -10,12 +11,13 @@ By using the Service, you agree to the collection and use of information in acco
 
 We collect the following information to provide and improve the Service:
 
-- **Account Information**: email address, username, display name, and profile picture.  
-- **User Content**: any text, files, or data you upload to the Service.  
-- **Cookies**: a refresh token cookie to maintain your session (expires after 7 days of inactivity).  
-- **Technical Information**: IP address and timezone to enable rate limiting and ensure proper functioning of the Service.  
+- **Account Information**: your email address, username, display name, profile picture, security info and preferences.  
+- **Usercontent**: any text, files, or data you upload to the Service.  
+- **Cookies**: see our [Cookies Policy](https://davidnet.net/legal/cookies).  
+- **Technical Information**: IP address and useragent to enable rate limiting and ensure security.
+- **Preferences**: see your [account preferences](https://account.davidnet.net/account/settings/preferences).
 
-We **do not use your information for tracking, analytics, or advertising purposes**, and we do not sell your data to third parties.
+We **do not use your information for tracking, analytics, or advertising**, and we **do not sell** your data to third parties.
 
 ---
 
@@ -23,10 +25,9 @@ We **do not use your information for tracking, analytics, or advertising purpose
 
 Your data is used solely to provide the Service:
 
-- To authenticate and manage your account.  
-- To store and display your User Content.  
+- To let you use and access the Service.  
+- To communicate with you when necessary.  
 - To enforce rate limits and prevent abuse.  
-- To ensure the Service functions correctly according to your timezone.  
 
 ---
 
@@ -34,14 +35,15 @@ Your data is used solely to provide the Service:
 
 For EU users, the legal basis for processing your personal data includes:
 
-- Performance of a contract (providing the Service).  
-- Legitimate interest (rate limiting and Service security).  
+- **Performance of a contract** (providing the Service).  
+- **Legitimate interest** (rate limiting and Service security).  
 
 ---
 
 ## 4. Data Sharing and Disclosure
 
-We **do not share or sell** your personal data with third parties. We may disclose information only:
+We **do not share or sell** your personal data with third parties.  
+We may disclose information only:
 
 - When required by law or legal process.  
 - To protect the rights, property, or safety of Davidnet or others.  
@@ -50,44 +52,56 @@ We **do not share or sell** your personal data with third parties. We may disclo
 
 ## 5. Data Retention and Storage
 
-- Your account information and User Content are retained as long as your account exists.  
-- The refresh token cookie expires after 7 days of inactivity.  
+- Your account information and Usercontent are retained as long as your account exists.  
+- Cookie details are described [here](https://davidnet.net/legal/cookies).  
 - IP addresses used for rate limiting are retained temporarily and automatically discarded.  
-- **Encrypted backups** of your data are stored on OneDrive to ensure data recovery and continuity of the Service. These backups are encrypted and access is restricted to authorized personnel only.
-
+- Logs are rotated every 7 days.  
+- **Encrypted backups** of your data are securely stored on OneDrive for data recovery and service continuity.  
+  These backups are encrypted before upload so OneDrive cannot read your data.
 
 ---
 
 ## 6. Your Rights
 
-Depending on your location, you may have the following rights:
+Depending on your location, you may have the right to:
 
 - **Access** your personal data.  
-- **Correction** of inaccurate or incomplete data.  
-- **Deletion** of your account and personal data.  
-- **Restriction** of processing or objection to processing.  
-- **Data portability** (receive your data in a machine-readable format).  
+- **Correct** inaccurate or incomplete data.  
+- **Delete** your account and personal data.  
+- **Restrict** or **object** to certain processing.  
+- **Export** your data in a machine-readable format.  
+
+For more information about your privacy rights:  
+- [Autoriteit Persoonsgegevens (NL)](https://autoriteitpersoonsgegevens.nl/)  
+- [European Data Protection Board (EU)](https://edpb.europa.eu/)  
+- [CCPA (California, US)](https://oag.ca.gov/privacy/ccpa)
 
 ---
 
 ## 7. Security
 
-We implement reasonable technical measures to protect your information from unauthorized access, disclosure, or loss. However, no system is completely secure, and we cannot guarantee absolute security.
+We implement reasonable technical and organizational measures to protect your information from unauthorized access, disclosure, or loss.  
+However, no system is completely secure, and we cannot guarantee absolute security.
 
 ---
 
 ## 8. Children’s Privacy
 
-The Service is not intended for children under 13 years old (or the minimum age required by local law). We do not knowingly collect personal data from children.
+The Service is not intended for children under 13 years old (or the minimum age required by local law).  
+We do not knowingly collect personal data from children.
 
 ---
 
-## 9. Changes to This Policy
+## 9. Modifications to This Policy
 
-We may update this Privacy Policy from time to time. Changes will be posted on this page, with the last updated date and hash. Continued use of the Service after changes constitutes acceptance.
+- Davidnet may update this Policy at any time.  
+- Changes will be posted here with an updated date and hash.  
+- Continued use of the Service after changes constitutes acceptance of the new Policy.  
+- Reasonable efforts will be made to notify Users of material changes, such as via email.  
+- The single source of truth for this policy is always [here](https://davidnet.net/legal).  
 
 ---
 
 ## 10. Contact
 
-For questions about this Privacy Policy, you may contact us [here](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help).

@@ -55,10 +55,10 @@ you confirm that you are legally capable of forming a binding contract.
 
 ## 4. Usercontent
 
-- You retain ownership and responsibility for any Usercontent you upload to the
-  Service.
-- By uploading or sharing Usercontent, you grant the Service the right to store, display, delete and moderate it solely to provide the Service.
-- The Service is not responsible for Usercontent uploaded by you or other Users.
+- You retain ownership and responsibility for any Usercontent you upload to the Service.
+- You retain ownership and responsibility for any Usercontent you create on Service.
+- By uploading, creating or sharing Usercontent, you grant the Service the right to store, display, delete and moderate it solely to provide the Service.
+- The Service is not responsible for Usercontent uploaded or created by you or other Users.
 - You are solely responsible for ensuring that your Usercontent does not violate laws or third-party rights.
 
 ---
@@ -120,5 +120,4 @@ of these Terms.
 
 ## 10. Contact
 
-For questions regarding these Terms, you may contact us
-[here](https://davidnet.net/help).
+[More info about contacting us](https://davidnet.net/help).
