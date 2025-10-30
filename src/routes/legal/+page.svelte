@@ -7,10 +7,10 @@
 		<Icon icon="policy" size="4rem" color="var(--token-color-text-default-normal)" />
 		<h1 style="font-size: 2rem">Legal Information</h1>
 		<BlockNote
-			appearance="error"
-			title="Work in progress"
+			appearance="info"
+			title="Notice"
 		>
-		These documents are not valid. And everthing in them should be ignored.
+		Mistakes happen if something isn't right please contact us.
 		</BlockNote>
 		<Space height="var(--token-space-4)" />
 		<div class="option">

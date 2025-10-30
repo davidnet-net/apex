@@ -9,7 +9,10 @@
 		Loader,
 		getSessionInfo, isAuthenticated, refreshAccessToken,
 
-		LinkIconButton
+		LinkIconButton,
+
+		LinkButton
+
 
 	} from "@davidnet/svelte-ui";
 	import favicon from "$lib/assets/favicon.svg";
@@ -60,6 +63,8 @@
 		</div>
 		<div class="nav-center">Davidnet</div>
 		<div class="nav-right">
+			<LinkButton iconbefore="help" href="https://davidnet.net/help" appearance="subtle">Help</LinkButton>
+			<LinkButton iconbefore="policy" href="https://davidnet.net/legal" appearance="subtle">Legal</LinkButton>
 			<ThemeMenu />
 			<Avatar id={String(si?.userId)} owner name={si?.display_name} presence="online" src={si?.profilePicture} />
 		</div>
