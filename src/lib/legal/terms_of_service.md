@@ -102,6 +102,7 @@ of these Terms.
 - Any disputes will be resolved under Dutch law.
 - Where international laws apply (such as GDPR or CCPA), the Service will comply
   to the extent required.
+- Contact us we are happy to help with any dispute you have with us. 
 
 ---
 
