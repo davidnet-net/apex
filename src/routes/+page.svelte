@@ -69,7 +69,7 @@
 			</FlexWrapper>
 		</FlexWrapper>
 		<Space height="20vh" />
-		<h2 style="text-align: center;">All privacy friendly</h2>
+		<h2 style="text-align: center;">Privacy friendly</h2>
 		<div style="text-align: center; line-height: 1.5; max-width: 75%;">
 			At Davidnet, we prioritize your privacy. We collect as minimal data as possible to provide our tools and services. And we are starting to
 			work on e2e encryption for all tools and services so your data stays confidential. And everthing is stored inside the EU using our own servers.
