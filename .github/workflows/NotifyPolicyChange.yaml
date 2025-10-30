@@ -15,30 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Compute hash of changed files
-        id: hash
-        run: |
-          # Get all changed files from the latest commit
-          FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
-          # Filter only files inside src/lib/legal/
-          LEGAL_FILES=$(echo "$FILES" | grep 'src/lib/legal/' || true)
-
-          # If no legal files changed, stop here
-          if [ -z "$LEGAL_FILES" ]; then
-            echo "No legal files changed."
-            echo "hash=none" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Compute combined SHA256 hash of changed legal files
-          HASH=$(cat $LEGAL_FILES | sha256sum | awk '{print $1}')
-          echo "Changed files: $LEGAL_FILES"
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-
       - name: Send webhook to backend
         if: steps.hash.outputs.hash != 'none'
         run: |
           curl -X POST https://auth.davidnet.net/internal/policy_change \
           -H "Content-Type: application/json" \
-          -H "X-Webhook-Token: ${{ secrets.POLICY_WEBHOOK_SECRET }}" \
+          -H "X-Webhook-Token: ${{ github.sha }}" \
           -d "{\"files\": \"${{ steps.hash.outputs.hash }}\", \"commit\": \"${{ github.sha }}\"}"
