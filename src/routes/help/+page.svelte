@@ -20,7 +20,7 @@
 		</div>
 		<div class="option">
 			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
-				<a href="/help/" class="option-text">Contact us</a>
+				<a href="/help/contact" class="option-text">Contact us</a>
 			</FlexWrapper>
 		</div>
         <Button iconbefore="arrow_back" onClick={()=>{history.back()}}>Back</Button>

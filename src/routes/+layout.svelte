@@ -7,13 +7,11 @@
 		FlexWrapper,
 		Avatar,
 		Loader,
-		getSessionInfo, isAuthenticated, refreshAccessToken,
-
+		getSessionInfo,
+		isAuthenticated,
+		refreshAccessToken,
 		LinkIconButton,
-
 		LinkButton
-
-
 	} from "@davidnet/svelte-ui";
 	import favicon from "$lib/assets/favicon.svg";
 	import { onMount } from "svelte";
@@ -92,7 +90,9 @@
 		user-select: none;
 		font-weight: 600;
 		font-size: 0.9rem;
-		position: fixed;
+		position: sticky;
+		top: 0;
+		z-index: 2;
 	}
 
 	#main-nav > div {
