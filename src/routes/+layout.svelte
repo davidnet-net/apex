@@ -59,7 +59,7 @@
 		<div class="nav-left">
 			<LinkIconButton icon="apps" alt="Davidnet Home" href="https://home.davidnet.net" appearance="subtle" /><a href="/">Davidnet</a>
 		</div>
-		<div class="nav-center">Davidnet</div>
+		<div class="nav-center"></div>
 		<div class="nav-right">
 			<LinkButton iconbefore="help" href="/help" appearance="subtle">Help</LinkButton>
 			<LinkButton iconbefore="policy" href="/legal" appearance="subtle">Legal</LinkButton>
