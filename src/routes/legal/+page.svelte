@@ -25,11 +25,6 @@
 		</div>
 		<div class="option">
 			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
-				<a href="/legal/delete_account" class="option-text">About account deletion</a>
-			</FlexWrapper>
-		</div>
-		<div class="option">
-			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
 				<a href="/legal/disclaimer" class="option-text">Disclaimer</a>
 			</FlexWrapper>
 		</div>
