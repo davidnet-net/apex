@@ -15,5 +15,8 @@ This tool must not be used to bypass access controls, violate privacy, perform s
 ## Takedown Requests and Contact
 If you are a content owner and wish to restrict this tool’s access to your material or request removal of certain content, please contact us via [our contact page](https://davidnet.net/help/contact).
 
+## robots.txt
+There is no robots.txt that prevents scraping. Please make an robots.txt and contact us to let us remove the tool.
+
 ## Other Terms
 Users also agree to the other policies available [here](https://davidnet.net/legal).
