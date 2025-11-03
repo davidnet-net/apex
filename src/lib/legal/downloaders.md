@@ -1,5 +1,7 @@
 # Downloader Disclaimer
 
+This disclaimer is intended for services that provide scraping or downloading content from third party sources.
+
 ## Purpose and Scope
 This downloader/scraper is designed solely for personal, educational, or research use. Its functionality relies on publicly available or user-accessible sources and does not host, distribute, or permanently copy any content beyond what is necessary for the user’s immediate use.
 
