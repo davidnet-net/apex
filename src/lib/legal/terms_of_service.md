@@ -32,6 +32,7 @@ conjunction with these Terms:
 - [Licenses](/legal/licenses)
 - [Acceptable Use Policy](/legal/acceptable_use_policy)
 - [Security Policy](/legal/security_policy)
+- [Downloaders disclaimer](/legal/downloaders)
 
 ---
 
