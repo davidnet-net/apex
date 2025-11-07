@@ -6,7 +6,7 @@
 	<FlexWrapper height="50%" width="100%" justifycontent="flex-start" gap="var(--token-space-4);">
 		<Icon icon="policy" size="4rem" color="var(--token-color-text-default-normal)" />
 		<h1 style="font-size: 2rem">Legal Information</h1>
-		<BlockNote appearance="info" title="Notice">Mistakes happen if something isn't right please contact us.</BlockNote>
+		<BlockNote appearance="info" title="Notice">Mistakes happen, if something isn't right please contact us.</BlockNote>
 		<BlockNote appearance="warning" title="Contact">We are working on automating to contact you when policies change. This will be done as quickly as possible.</BlockNote>
 		<Space height="var(--token-space-4)" />
 		<div class="option">
@@ -47,11 +47,6 @@
 		<div class="option">
 			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
 				<a href="/legal/security_policy" class="option-text">Security policy</a>
-			</FlexWrapper>
-		</div>
-		<div class="option">
-			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
-				<a href="/legal/downloaders" class="option-text">Downloaders disclaimer</a>
 			</FlexWrapper>
 		</div>
 		<Button

@@ -10,7 +10,7 @@
 			appearance="info"
 			title="Notice"
 		>
-		Mistakes happen if something isn't right please contact us.
+		Mistakes happen, if something isn't right please contact us.
 		</BlockNote>
 		<Space height="var(--token-space-4)" />
 		<div class="option">
