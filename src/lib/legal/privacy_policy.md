@@ -55,7 +55,7 @@ We may disclose information only:
 - Your account information and Usercontent are retained as long as your account exists.  
 - Cookie details are described [here](https://davidnet.net/legal/cookies).  
 - IP addresses used for rate limiting are retained temporarily and automatically discarded.  
-- Logs are rotated every 7 days.  
+- Logs are rotated every 14 days.  
 - **Encrypted backups** of your data are securely stored on OneDrive for data recovery and service continuity.  
   These backups are encrypted before upload so OneDrive cannot read your data.
 
