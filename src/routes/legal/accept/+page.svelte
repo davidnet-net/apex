@@ -25,7 +25,7 @@
 	// Fetch session and policy status
 	onMount(async () => {
 		try {
-			await refreshAccessToken(correlationID, true, true);
+			await refreshAccessToken(correlationID, false, true);
 
 			const si = await getSessionInfo(correlationID);
 			if (!si || !(await isAuthenticated(correlationID))) {
