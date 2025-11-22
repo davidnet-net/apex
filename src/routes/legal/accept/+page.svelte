@@ -39,7 +39,7 @@
 				});
 				setTimeout(() => {
 					window.location.href = `https://account.davidnet.net/login?redirect=${encodeURIComponent(
-						"https://account.davidnet.net/legal/accept"
+						"https://davidnet.net/legal/accept"
 					)}`;
 				}, 500);
 				return;
@@ -64,7 +64,7 @@
 			});
 			setTimeout(() => {
 				window.location.href = `https://account.davidnet.net/login?redirect=${encodeURIComponent(
-					"https://account.davidnet.net/legal/accept"
+					"https://davidnet.net/legal/accept"
 				)}`;
 			}, 500);
 		} finally {
