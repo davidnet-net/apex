@@ -19,5 +19,5 @@ jobs:
         run: |
           curl -X POST https://auth.davidnet.net/internal/policy_change \
           -H "Content-Type: application/json" \
-          -H "X-Webhook-Token: ${{ github.sha }}" \
+          -H "X-Webhook-Token: ${{ secrets.INTERNAL_TOKEN }}" \
           -d "{\"commit\": \"${{ github.sha }}\"}"
