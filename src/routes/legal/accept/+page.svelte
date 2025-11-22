@@ -130,24 +130,24 @@
 				<Loader />
 			</FlexWrapper>
 		{:else if showAcceptedScreen}
-			<FlexWrapper direction="column" alignitems="center" justifycontent="center" gap="var(--token-space-3);" height="100%">
+			<FlexWrapper direction="column" alignitems="center" justifycontent="center" gap="var(--token-space-3)" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
 				<h1>Policies Accepted</h1>
 				<p>Thank you, {sessionInfo?.display_name}! You have successfully accepted the latest policies.</p>
 				<p>You can now continue using your account.</p>
 				<Space height="var(--token-space-2)" />
-				<FlexWrapper direction="row" gap="1rem">
+				<FlexWrapper direction="column" gap="1rem">
 					<LinkButton href="https://home.davidnet.net">Home</LinkButton>
 					<LinkButton href="https://davidnet.net">Davidnet</LinkButton>
 					<LinkButton href="https://account.davidnet.net">My Account</LinkButton>
 				</FlexWrapper>
 			</FlexWrapper>
 		{:else if accepted}
-			<FlexWrapper direction="column" alignitems="center" justifycontent="center"  gap="var(--token-space-3);" height="100%">
+			<FlexWrapper direction="column" alignitems="center" justifycontent="center"  gap="var(--token-space-3)" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
 				<h1>Policies already accepted</h1>
 				<Space height="var(--token-space-2)" />
-				<FlexWrapper direction="row" gap="1rem">
+				<FlexWrapper direction="column" gap="1rem">
 					<LinkButton href="https://home.davidnet.net">Home</LinkButton>
 					<LinkButton href="https://davidnet.net">Davidnet</LinkButton>
 					<LinkButton href="https://account.davidnet.net">My Account</LinkButton>
