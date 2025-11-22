@@ -52,7 +52,7 @@
 			if (!res.ok) throw new Error("Failed to check policy status");
 			const data = await res.json();
 			accepted = data.accepted ?? false;
-			showAcceptedScreen = accepted;
+			//showAcceptedScreen = accepted;
 		} catch (err) {
 			console.error(err);
 			toast({
