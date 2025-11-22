@@ -14,6 +14,7 @@
 		Icon
 	} from "@davidnet/svelte-ui";
 	import type { SessionInfo } from "$lib/types";
+	import { authapiurl } from "$lib/config";
 
 	let sessionInfo: SessionInfo | null = null;
 	let loadingSession = true;
@@ -47,7 +48,7 @@
 
 			sessionInfo = si;
 
-			const res = await authFetch("policy/check", correlationID);
+			const res = await authFetch(authapiurl + "/policy/check", correlationID);
 			if (!res.ok) throw new Error("Failed to check policy status");
 			const data = await res.json();
 			accepted = data.accepted ?? false;
@@ -78,7 +79,7 @@
 		accepting = true;
 
 		try {
-			const res = await authFetch("policy/accept", correlationID, {
+			const res = await authFetch(authapiurl + "/policy/accept", correlationID, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" }
 			});
