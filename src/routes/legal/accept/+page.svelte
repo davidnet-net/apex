@@ -48,7 +48,7 @@
 
 			sessionInfo = si;
 
-			const res = await authFetch(authapiurl + "/policy/check", correlationID);
+			const res = await authFetch(authapiurl + "policy/check", correlationID);
 			if (!res.ok) throw new Error("Failed to check policy status");
 			const data = await res.json();
 			accepted = data.accepted ?? false;
@@ -79,7 +79,7 @@
 		accepting = true;
 
 		try {
-			const res = await authFetch(authapiurl + "/policy/accept", correlationID, {
+			const res = await authFetch(authapiurl + "policy/accept", correlationID, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" }
 			});
