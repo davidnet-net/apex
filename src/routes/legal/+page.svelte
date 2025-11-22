@@ -7,7 +7,6 @@
 		<Icon icon="policy" size="4rem" color="var(--token-color-text-default-normal)" />
 		<h1 style="font-size: 2rem">Legal Information</h1>
 		<BlockNote appearance="info" title="Notice">Mistakes happen, if something isn't right please contact us.</BlockNote>
-		<BlockNote appearance="warning" title="Contact">We are working on automating to contact you when policies change. This will be done as quickly as possible.</BlockNote>
 		<Space height="var(--token-space-4)" />
 		<div class="option">
 			<FlexWrapper height="100%" width="100%" justifycontent="center" alignitems="center">
