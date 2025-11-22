@@ -124,6 +124,7 @@
 
 <FlexWrapper width="100%" height="100%">
 	<div id="background">
+        <Space height="var(--token-space-4)" />
 		{#if loadingSession}
 			<FlexWrapper justifycontent="center" alignitems="center" height="100%">
 				<Loader />
