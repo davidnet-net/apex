@@ -130,7 +130,7 @@
 				<Loader />
 			</FlexWrapper>
 		{:else if showAcceptedScreen}
-			<FlexWrapper direction="column" alignitems="center" justifycontent="center" padding="2rem" gap="1.5rem" height="100%">
+			<FlexWrapper direction="column" alignitems="center" justifycontent="center" gap="var(--token-space-3);" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
 				<h1>Policies Accepted</h1>
 				<p>Thank you, {sessionInfo?.display_name}! You have successfully accepted the latest policies.</p>
@@ -143,7 +143,7 @@
 				</FlexWrapper>
 			</FlexWrapper>
 		{:else if accepted}
-			<FlexWrapper direction="column" alignitems="center" justifycontent="center" padding="2rem" gap="1.5rem" height="100%">
+			<FlexWrapper direction="column" alignitems="center" justifycontent="center"  gap="var(--token-space-3);" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
 				<h1>Policies already accepted</h1>
 				<Space height="var(--token-space-2)" />
@@ -154,7 +154,7 @@
 				</FlexWrapper>
 			</FlexWrapper>
 		{:else if sessionInfo}
-			<FlexWrapper direction="column" alignitems="center" padding="2rem" gap="1.5rem">
+			<FlexWrapper direction="column" alignitems="center"  gap="var(--token-space-3);">
 				<Icon icon="contract_edit" size="10rem" />
 				<h1>Updated Policies</h1>
 				<p>Hello {sessionInfo.display_name}, our policies have changed.</p>
