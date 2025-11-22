@@ -89,7 +89,7 @@
 				accepted = true;
 				showAcceptedScreen = true;
 				toast({
-					title: "Policies Accepted",
+					title: "Latest policies Accepted",
 					desc: "You have successfully accepted the latest policies.",
 					icon: "check_circle",
 					appearance: "success",
@@ -99,7 +99,7 @@
 			} else {
 				toast({
 					title: "Error",
-					desc: "Failed to accept policies.",
+					desc: "Failed to accept latest policies.",
 					icon: "crisis_alert",
 					appearance: "danger",
 					position: "bottom-left",
@@ -110,7 +110,7 @@
 			console.error(err);
 			toast({
 				title: "Error",
-				desc: "Failed to accept policies.",
+				desc: "Failed to accept latest policies.",
 				icon: "crisis_alert",
 				appearance: "danger",
 				position: "bottom-left",
@@ -132,7 +132,7 @@
 		{:else if showAcceptedScreen}
 			<FlexWrapper direction="column" alignitems="center" justifycontent="center" gap="var(--token-space-3)" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
-				<h1>Policies Accepted</h1>
+				<h1>Latest policies accepted</h1>
 				<p>Thank you, {sessionInfo?.display_name}! You have successfully accepted the latest policies.</p>
 				<p>You can now continue using your account.</p>
 				<Space height="var(--token-space-2)" />
@@ -145,7 +145,7 @@
 		{:else if accepted}
 			<FlexWrapper direction="column" alignitems="center" justifycontent="center"  gap="var(--token-space-3)" height="100%">
 				<Icon icon="verified" size="10rem" color="var(--token-color-text-success)" />
-				<h1>Policies already accepted</h1>
+				<h1>Latest policies already accepted</h1>
 				<Space height="var(--token-space-2)" />
 				<FlexWrapper direction="column" gap="1rem">
 					<LinkButton href="https://home.davidnet.net">Home</LinkButton>
