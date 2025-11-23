@@ -164,7 +164,7 @@
 					{#if !accepting}
 						<LinkButton appearance="danger" href="https://account.davidnet.net/account/settings/data/account">Do not agree</LinkButton>
 					{/if}
-					<p style="color: var(--token-text-color-secondary);">If you do not agree you can delete your data at "Do not agree".</p>
+					<p style="color: var(--token-color-text-default-tertiary);">If you do not agree you can delete your data at "Do not agree".</p>
 				</FlexWrapper>
 			{:else}
 				<p>Error loading session. Please <a href="https://account.davidnet.net/login">login</a>.</p>
