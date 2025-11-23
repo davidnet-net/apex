@@ -162,9 +162,10 @@
 						{accepting ? "Accepting..." : "Accept Policies"}
 					</Button>
 					<Space height="var(--token-space-2)" />
-					{#if accepting}
+					{#if !accepting}
 						<LinkButton appearance="danger" href="https://account.davidnet.net/account/settings/data/account">Do not agree</LinkButton>
 					{/if}
+					<p style="color=var(--token-text-color-secondary); text-align=center">If you do not agree you can delete your data at "Do not agree".</p>
 				</FlexWrapper>
 			{:else}
 				<p>Error loading session. Please <a href="https://account.davidnet.net/login">login</a>.</p>
