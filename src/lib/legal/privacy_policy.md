@@ -9,15 +9,15 @@ By using the Service, you agree to the collection and use of information in acco
 
 ## 1. Information We Collect
 
-We collect the following information to provide and improve the Service:
+We collect the following information to provide the Service:
 
 - **Account Information**: your email address, username, display name, profile picture, security info and preferences.  
-- **Usercontent**: any text, files, or data you upload to the Service.  
+- **Usercontent**: any text, drawings, audio, files, or data you upload to the Service.  
 - **Cookies**: see our [Cookies Policy](https://davidnet.net/legal/cookies).  
 - **Technical Information**: IP address and useragent to enable rate limiting and ensure security.
 - **Preferences**: see your [account preferences](https://account.davidnet.net/account/settings/preferences).
 
-We **do not use your information for tracking, analytics, or advertising**, and we **do not sell** your data to third parties.
+We **do not use your information for tracking, analytics, AI training, or advertising**, and we **do not sell** your data to third parties.
 
 ---
 
@@ -27,7 +27,7 @@ Your data is used solely to provide the Service:
 
 - To let you use and access the Service.  
 - To communicate with you when necessary.  
-- To enforce rate limits and prevent abuse.  
+- To prevent abuse.  
 
 ---
 
