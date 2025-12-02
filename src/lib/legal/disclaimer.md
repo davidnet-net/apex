@@ -60,6 +60,12 @@ The content and materials provided on Davidnet (the “Service”) are for gener
 
 ---
 
-## 8. Contact
+## 8. Speciale rechten
+
+De eigenaar van Davidnet behoud het recht om op elk moment eikels tegen je te kunnen gooien. Je mag jezelf hier niet tegen verdedigen.
+
+---
+
+## 9. Contact
 
 [More info about contacting us](https://davidnet.net/help/contact).
