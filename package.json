@@ -33,7 +33,7 @@
 		"vite": "^7.1.7"
 	},
 	"dependencies": {
-		"@davidnet/svelte-ui": "^1.13.9",
+		"@davidnet/svelte-ui": "^1.13.12",
 		"marked": "^16.4.1",
 		"sitemap": "^9.0.0"
 	}
