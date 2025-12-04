@@ -32,8 +32,8 @@
   let clientData: any = null;
 
   function isDifferent(key: string) {
-    if (!data?.visitor?.clientHashes) return false;
-    return data.visitor.clientHashes[key] !== clientData[key];
+    if (!data?.visitor?.clientHashes || !data.clientHashes) return false;
+    return data.visitor.clientHashes[key] !== data.clientHashes[key];
   }
 
   onMount(async () => {
@@ -93,15 +93,13 @@
     <div class="value">{new Date(data.visitor.lastSeen).toLocaleString()}</div>  
 
     <div class="label">Accuracy</div>
-    <div class="value" class:is-low-accuracy={data.visitor.accuracy < 100}>
-      {data.visitor.accuracy}%
-    </div>  
+    <div class="value">{data.visitor.accuracy}%</div>  
 
-    <h2>Client Data</h2>
-    {#each Object.entries(clientData) as [key, value]}
+    <h2>Client Hashes</h2>
+    {#each Object.entries(data.clientHashes) as [key, value]}
       <div class="label">{key}</div>
       <div class="value" class:is-different={isDifferent(key)}>
-        {JSON.stringify(value)}
+        {value}
       </div>
     {/each}
 
@@ -121,14 +119,6 @@
         <div class="label">{key}</div>
         <div class="value">{typeof value === 'string' && key === 'lastSeen' ? new Date(value).toLocaleString() : JSON.stringify(value)}</div>
       {/if}
-    {/each}
-
-    <h2>Client Hashes</h2>
-    {#each Object.entries(data.clientHashes) as [key, value]}
-      <div class="label">{key}</div>
-      <div class="value" class:is-different={data.visitor.clientHashes[key] !== value}>
-        {value}
-      </div>
     {/each}
   </div>
 {:else}
@@ -163,11 +153,6 @@
   }
 
   .value.is-different {
-    color: red;
-    font-weight: bold;
-  }
-
-  .value.is-low-accuracy {
     color: red;
     font-weight: bold;
   }

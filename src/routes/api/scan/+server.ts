@@ -26,7 +26,7 @@ function computeSimilarity(a: Record<string, string>, b: Record<string, string>)
 export const POST: RequestHandler = async ({ request }) => {
   const clientData = await request.json();
 
-  // Hash all client values (including audioHash)
+  // Hash all client values
   const clientHashes: Record<string, string> = {};
   for (const [key, value] of Object.entries(clientData)) {
     clientHashes[key] = await hashSHA256(
