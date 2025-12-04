@@ -47,7 +47,7 @@ export const POST: RequestHandler = async ({ request }) => {
   const serverhash = await hashSHA256(headers);
 
   // IP hash
-  const ip = "86.85.55.19"; // replace with real IP in prod
+  const ip = "0.0.0.0";
   const iphash = await hashSHA256(ip);
 
   // Combine all for final fingerprint
