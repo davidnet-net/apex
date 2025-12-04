@@ -71,7 +71,6 @@
     gap: 0.5rem 1rem;
     padding: 1rem;
     border-radius: 0.5rem;
-    color: #f0f0f0;
     overflow-x: auto;
   }
 
