@@ -47,7 +47,10 @@ export const POST: RequestHandler = async ({ request }) => {
   const serverhash = await hashSHA256(headers);
 
   // IP hash
-  const ip = "0.0.0.0";
+  let ip =
+  request.headers.get('x-real-ip') ??
+  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+  '0.0.0.0';
   const iphash = await hashSHA256(ip);
 
   // Combine all for final fingerprint
