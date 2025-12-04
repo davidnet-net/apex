@@ -91,6 +91,9 @@
     <div class="label">Last Seen</div>
     <div class="value">{new Date(data.visitor.lastSeen).toLocaleString()}</div>  
 
+    <div class="label">Accuracy</div>
+    <div class="value">{data.visitor.accuracy}%</div>  
+
     <h2>Client Data</h2>
     {#each Object.entries(clientData) as [key, value]}
       <div class="label">{key}</div>
