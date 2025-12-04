@@ -45,7 +45,7 @@
     const pixelDepth = window.screen.pixelDepth;
     const userAgent = navigator.userAgent;
     const hardwareConcurrency = navigator.hardwareConcurrency;
-    const fonts = document.fonts;
+    const fontsHash = await hashSHA256(JSON.stringify(Array.from(document.fonts).map(f => f.family)));
     const canvasHash = await hashSHA256(String(await getCanvasHash()));
     const webGLHash = await hashSHA256(String(await getWebGLInfo()));
     const audioHash = await hashSHA256(String(await getAudioInfo()));
@@ -59,7 +59,7 @@
       pixelDepth,
       userAgent,
       hardwareConcurrency,
-      fonts,
+      fontsHash,
       canvasHash,
       webGLHash,
       audioHash
