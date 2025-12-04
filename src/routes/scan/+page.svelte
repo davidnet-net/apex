@@ -9,7 +9,6 @@
       ctx.textBaseline = 'top';
       ctx.font = '14px Arial';
       ctx.fillText('davidnet_fingerprint', 2, 2);
-      console.debug(canvas.toDataURL());
       return canvas.toDataURL();
     } else return null;
   }
@@ -18,7 +17,6 @@
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl');
     if (!gl) return null;
-    console.debug(gl);
     return {
       vendor: gl.getParameter(gl.VENDOR),
       renderer: gl.getParameter(gl.RENDERER)
@@ -27,14 +25,16 @@
 
   async function getAudioInfo() {
     const audio = new AudioContext();
-    const fingerprint = audio.sampleRate;
-
-    console.debug(fingerprint);
-    return fingerprint;
+    return audio.sampleRate;
   }
 
   let data: any = null;
   let clientData: any = null;
+
+  function isDifferent(key: string) {
+    if (!data?.visitor?.clientHashes) return false;
+    return data.visitor.clientHashes[key] !== clientData[key];
+  }
 
   onMount(async () => {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -81,6 +81,7 @@
 {#if data}
   <div class="table">
     <h1>Davidnet Fingerprint</h1>
+
     <h2>Summary</h2>
     <div class="label">Visitor ID</div>
     <div class="value">{data.visitor.id}</div>
@@ -92,12 +93,16 @@
     <div class="value">{new Date(data.visitor.lastSeen).toLocaleString()}</div>  
 
     <div class="label">Accuracy</div>
-    <div class="value">{data.visitor.accuracy}%</div>  
+    <div class="value" class:is-low-accuracy={data.visitor.accuracy < 100}>
+      {data.visitor.accuracy}%
+    </div>  
 
     <h2>Client Data</h2>
     {#each Object.entries(clientData) as [key, value]}
       <div class="label">{key}</div>
-      <div class="value">{JSON.stringify(value)}</div>
+      <div class="value" class:is-different={isDifferent(key)}>
+        {JSON.stringify(value)}
+      </div>
     {/each}
 
     <h2>Server Result</h2>
@@ -121,7 +126,9 @@
     <h2>Client Hashes</h2>
     {#each Object.entries(data.clientHashes) as [key, value]}
       <div class="label">{key}</div>
-      <div class="value">{value}</div>
+      <div class="value" class:is-different={data.visitor.clientHashes[key] !== value}>
+        {value}
+      </div>
     {/each}
   </div>
 {:else}
@@ -153,6 +160,16 @@
   .value {
     word-break: break-word;
     color: var(--token-color-text-primary);
+  }
+
+  .value.is-different {
+    color: red;
+    font-weight: bold;
+  }
+
+  .value.is-low-accuracy {
+    color: red;
+    font-weight: bold;
   }
 
   @media (max-width: 600px) {
