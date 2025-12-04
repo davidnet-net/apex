@@ -84,6 +84,7 @@
   .label {
     font-weight: bold;
     word-break: break-word;
+     color: var(--token-color-text-discover);
   }
 
   .value {
@@ -95,11 +96,7 @@
     .table {
       grid-template-columns: 1fr;
     }
-    .label {
-      color: #ffa07a;
-    }
     .value {
-      color: #90ee90;
       margin-bottom: 0.5rem;
     }
   }
