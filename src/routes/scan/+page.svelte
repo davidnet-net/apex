@@ -90,7 +90,6 @@
     grid-column: 1 / -1;
     margin-top: 1rem;
     margin-bottom: 0.5rem;
-    color: var(--token-color-text-primary);
   }
 
   .label {
@@ -101,7 +100,7 @@
 
   .value {
     word-break: break-word;
-    color: #add8e6;
+    color: var(--token-color-text-primary);
   }
 
   @media (max-width: 600px) {
@@ -117,6 +116,16 @@
 {#if data}
   <div class="table">
     <h1>Davidnet Fingerprint</h1>
+    <h2>Summary</h2>
+    <div class="label">Visitor ID</div>
+    <div class="value">{data.visitor.id}</div>
+
+    <div class="label">Seen Before</div>
+    <div class="value">{data.visitor.seenBefore ? "Yes" : "No"}</div>
+
+    <div class="label">Last Seen</div>
+    <div class="value">{new Date(data.visitor.lastSeen).toLocaleString()}</div>  
+
     <h2>Client Data</h2>
     {#each Object.entries(clientData) as [key, value]}
       <div class="label">{key}</div>
