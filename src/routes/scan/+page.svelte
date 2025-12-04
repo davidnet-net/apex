@@ -45,6 +45,7 @@
     const pixelDepth = window.screen.pixelDepth;
     const userAgent = navigator.userAgent;
     const hardwareConcurrency = navigator.hardwareConcurrency;
+    const fonts = document.fonts;
     const canvasHash = await hashSHA256(String(await getCanvasHash()));
     const webGLHash = await hashSHA256(String(await getWebGLInfo()));
     const audioHash = await hashSHA256(String(await getAudioInfo()));
@@ -58,6 +59,7 @@
       pixelDepth,
       userAgent,
       hardwareConcurrency,
+      fonts,
       canvasHash,
       webGLHash,
       audioHash
@@ -75,43 +77,6 @@
     }
   });
 </script>
-
-<style>
-  .table {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 0.5rem 1rem;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-  }
-
-  .table h2 {
-    grid-column: 1 / -1;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .label {
-    font-weight: bold;
-    word-break: break-word;
-     color: var(--token-color-text-discover);
-  }
-
-  .value {
-    word-break: break-word;
-    color: var(--token-color-text-primary);
-  }
-
-  @media (max-width: 600px) {
-    .table {
-      grid-template-columns: 1fr;
-    }
-    .value {
-      margin-bottom: 0.5rem;
-    }
-  }
-</style>
 
 {#if data}
   <div class="table">
@@ -159,3 +124,40 @@
 {:else}
   <Loader />
 {/if}
+
+<style>
+  .table {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 0.5rem 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  .table h2 {
+    grid-column: 1 / -1;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .label {
+    font-weight: bold;
+    word-break: break-word;
+    color: var(--token-color-text-discover);
+  }
+
+  .value {
+    word-break: break-word;
+    color: var(--token-color-text-primary);
+  }
+
+  @media (max-width: 600px) {
+    .table {
+      grid-template-columns: 1fr;
+    }
+    .value {
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>
