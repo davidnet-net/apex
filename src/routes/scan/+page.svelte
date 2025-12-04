@@ -9,6 +9,7 @@
       ctx.textBaseline = 'top';
       ctx.font = '14px Arial';
       ctx.fillText('davidnet_fingerprint', 2, 2);
+      console.debug(canvas.toDataURL());
       return canvas.toDataURL();
     } else return null;
   }
@@ -17,10 +18,19 @@
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl');
     if (!gl) return null;
+    console.debug(gl);
     return {
       vendor: gl.getParameter(gl.VENDOR),
       renderer: gl.getParameter(gl.RENDERER)
     };
+  }
+
+  async function getAudioInfo() {
+    const audio = new AudioContext();
+    const fingerprint = audio.sampleRate;
+
+    console.debug(fingerprint);
+    return fingerprint;
   }
 
   let data: any = null;
@@ -37,6 +47,7 @@
     const hardwareConcurrency = navigator.hardwareConcurrency;
     const canvasHash = await hashSHA256(String(await getCanvasHash()));
     const webGLHash = await hashSHA256(String(await getWebGLInfo()));
+    const audioHash = await hashSHA256(String(await getAudioInfo()));
 
     clientData = {
       timezone,
@@ -48,7 +59,8 @@
       userAgent,
       hardwareConcurrency,
       canvasHash,
-      webGLHash
+      webGLHash,
+      audioHash
     };
 
     try {

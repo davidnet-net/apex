@@ -13,7 +13,7 @@ async function hashSHA256(data: string) {
 // Temporary in-memory visitor storage
 const visitors: Record<string, any> = {};
 
-// Compute similarity percentage between two hash sets
+// Compute similarity percentage
 function computeSimilarity(a: Record<string, string>, b: Record<string, string>) {
   const keys = Object.keys(a);
   let matches = 0;
@@ -26,13 +26,15 @@ function computeSimilarity(a: Record<string, string>, b: Record<string, string>)
 export const POST: RequestHandler = async ({ request }) => {
   const clientData = await request.json();
 
-  // Hash individual client values
+  // Hash all client values (including audioHash)
   const clientHashes: Record<string, string> = {};
   for (const [key, value] of Object.entries(clientData)) {
-    clientHashes[key] = await hashSHA256(String(value));
+    clientHashes[key] = await hashSHA256(
+      typeof value === 'object' ? JSON.stringify(value) : String(value)
+    );
   }
 
-  // Server headers
+  // Hash server headers
   const headers = [
     request.headers.get('user-agent'),
     request.headers.get('accept'),
@@ -46,24 +48,25 @@ export const POST: RequestHandler = async ({ request }) => {
   ].join('|');
   const serverhash = await hashSHA256(headers);
 
-  // IP hash
-  let ip =
-  request.headers.get('x-real-ip') ??
-  request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-  '0.0.0.0';
+  // Hash IP
+  const ip =
+    request.headers.get('x-real-ip') ??
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    '0.0.0.0';
   const iphash = await hashSHA256(ip);
 
-  // Combine all for final fingerprint
+  // Build the final fingerprint
   const combinedHashes = Object.values(clientHashes).concat([serverhash, iphash]).join('|');
   const finalFingerprint = await hashSHA256(combinedHashes);
 
-  // Fuzzy visitor lookup
+  // Fuzzy visitor matching
   let visitor: any = null;
   let bestAccuracy = 0;
 
   for (const v of Object.values(visitors)) {
     const similarity = computeSimilarity(clientHashes, v.clientHashes);
     if (similarity > bestAccuracy) bestAccuracy = similarity;
+
     if (similarity >= 0.8) {
       visitor = v;
       visitor.seenBefore = true;
@@ -82,7 +85,7 @@ export const POST: RequestHandler = async ({ request }) => {
       accuracy: Math.round(bestAccuracy * 100)
     };
   } else {
-    visitor.clientHashes = clientHashes; // update with latest hashes
+    visitor.clientHashes = clientHashes;
   }
 
   visitors[finalFingerprint] = visitor;
