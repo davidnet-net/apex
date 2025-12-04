@@ -71,7 +71,6 @@
     gap: 0.5rem 1rem;
     padding: 1rem;
     border-radius: 0.5rem;
-    background: #1a1a1a;
     color: #f0f0f0;
     overflow-x: auto;
   }
@@ -80,12 +79,11 @@
     grid-column: 1 / -1;
     margin-top: 1rem;
     margin-bottom: 0.5rem;
-    color: #ffd700;
+    color: var(--token-color-text-primary);
   }
 
   .label {
     font-weight: bold;
-    color: #ff8c00;
     word-break: break-word;
   }
 
