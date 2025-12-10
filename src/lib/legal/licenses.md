@@ -34,6 +34,7 @@ Davidnet uses several third-party open-source libraries, tools, and assets. Thes
 | svelte-dnd-action | MIT | [github.com/isaacHagoel/svelte-dnd-action](https://github.com/isaacHagoel/svelte-dnd-action) |
 | otpauth | MIT | [github.com/hectorm/otpauth](https://github.com/hectorm/otpauth) |
 | qrcode | MIT | [github.com/soldair/node-qrcode](https://github.com/soldair/node-qrcode) |
+| Google Fonts & Icons | Apache 2.0 | [github.com/google/material-design-icons](https://github.com/google/material-design-icons/blob/master/LICENSE)) |
 
 **Note:** All third-party components are used in accordance with their respective licenses.
 
