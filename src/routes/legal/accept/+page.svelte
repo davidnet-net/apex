@@ -161,6 +161,7 @@
 					<Button appearance="primary" onClick={acceptPolicy} disabled={accepting}>
 						{accepting ? "Accepting..." : "Accept Policies"}
 					</Button>
+					<LinkButton opennewtab href="https://github.com/davidnet-net/apex/commits/main/src/lib/legal"/>View changes</LinkButton>
 					{#if !accepting}
 						<LinkButton appearance="danger" href="https://account.davidnet.net/account/settings/data/account">Do not agree</LinkButton>
 					{/if}
