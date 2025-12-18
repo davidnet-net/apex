@@ -29,7 +29,8 @@ You may **not** use the Service to:
 
 ## 3. Enforcement
 
-- Davidnet may suspend, limit, or terminate your access to the Service for violations of this Policy.  
+- Davidnet may suspend, limit, moderate, or terminate your access to the Service for violations of this Policy.  
+- Davidnet may remove any usercontent at any time.
 - We may take appropriate legal action against individuals or entities that breach this Policy.  
 - Enforcement actions will be conducted in accordance with our [Terms of Service](https://davidnet.net/legal/terms_of_service) and applicable law.
 
