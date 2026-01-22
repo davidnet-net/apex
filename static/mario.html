@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Mario - Mega Building Update</title>
+    <title>3D Mario - FPS & Checkpoint Fix</title>
     <style>
         body {
             margin: 0;
@@ -44,6 +44,7 @@
         .heart-icon { color: #ff4444; font-size: 20px; }
         .star-icon { color: #ffd700; font-size: 20px; }
         .score-icon { color: #4caf50; font-size: 20px; }
+        .fps-icon   { color: #00ffff; font-size: 20px; } /* Cyan voor FPS */
 
         /* Settings knop */
         #settings-btn {
@@ -187,6 +188,9 @@
 
     <div id="stats-container">
         <div class="stat-box">
+            <span class="fps-icon">⚡</span> <span id="fps-counter">60</span> FPS
+        </div>
+        <div class="stat-box">
             <span class="heart-icon">❤️</span> <span id="lives">3</span>
         </div>
         <div class="stat-box">
@@ -243,8 +247,10 @@
             maxFPS: 60
         };
 
-        // FPS Control
+        // FPS Control & Counters
         let fpsInterval, now, then, elapsed;
+        let frameCount = 0;
+        let lastTimeFPS = 0;
 
         let scene, camera, renderer, player, clock;
         let platforms = [];
@@ -437,6 +443,7 @@
 
             fpsInterval = 1000 / gameConfig.maxFPS;
             then = Date.now();
+            lastTimeFPS = performance.now(); // Init FPS timer
             animate();
         }
 
@@ -565,12 +572,19 @@
 
         function createCheckpoint(x, y, z) {
             const group = new THREE.Group();
+            
+            // AUTOMATISCHE FUNDERING: Voeg een platform toe onder het checkpoint
+            // y - 0.5 omdat platforms gecentreerd zijn op hun Y-positie. 
+            // Een platform met hoogte 1 op y-0.5 heeft de bovenkant op y.
+            createPlatform(x, y - 0.5, z, 2.5, 1, 2.5, 'stone', 'box');
+
             const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
             const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
             const pole = new THREE.Mesh(poleGeo, poleMat); pole.position.y = 1; group.add(pole);
             const flagGeo = new THREE.BoxGeometry(0.8, 0.6, 0.05);
             const flagMat = new THREE.MeshStandardMaterial({ color: 0x00FF00, emissive: 0x003300 });
             const flagMesh = new THREE.Mesh(flagGeo, flagMat); flagMesh.position.set(0.4, 1.6, 0); group.add(flagMesh);
+            
             group.position.set(x, y, z); scene.add(group);
             checkpoints.push({ mesh: group, flagMesh: flagMesh, active: false, pos: { x: x, y: y + 1, z: z } });
         }
@@ -1205,6 +1219,14 @@
 
             now = Date.now();
             elapsed = now - then;
+
+            // FPS Counter Logic
+            frameCount++;
+            if (now - lastTimeFPS >= 1000) {
+                document.getElementById('fps-counter').innerText = frameCount;
+                frameCount = 0;
+                lastTimeFPS = now;
+            }
 
             if (elapsed > fpsInterval) {
                 then = now - (elapsed % fpsInterval);
