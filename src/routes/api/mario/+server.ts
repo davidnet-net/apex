@@ -1,21 +1,17 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-/**
- * Interface voor de gedeelde spelstatus op de server.
- */
 interface GameState {
     sharedLives: number;
-    totalStarsCollected: number;
+    sharedScore: number;
+    sharedStars: number;
     levelSeed: number;
     isLevelComplete: boolean;
 }
 
-/**
- * Interface voor individuele spelerdata.
- */
 interface PlayerData {
     id: string;
+    name: string;
     x: number;
     y: number;
     z: number;
@@ -25,63 +21,43 @@ interface PlayerData {
     lastSeen: number;
 }
 
-// In-memory staat (reset bij server restart)
-let globalGameState: GameState = {
+// In-memory state
+let globalState: GameState = {
     sharedLives: 3,
-    totalStarsCollected: 0,
+    sharedScore: 0,
+    sharedStars: 0,
     levelSeed: Math.floor(Math.random() * 1000000),
     isLevelComplete: false
 };
 
 const players = new Map<string, PlayerData>();
 
-/**
- * Verwijdert spelers die langer dan 5 seconden geen update hebben gestuurd.
- */
-function purgeInactivePlayers() {
-    const now = Date.now();
-    for (const [id, data] of players.entries()) {
-        if (now - data.lastSeen > 5000) {
-            players.delete(id);
-        }
-    }
-}
-
 export const POST: RequestHandler = async ({ request }) => {
-    const body = await request.json();
-    const { action, id, payload } = body;
+    const { action, id, payload } = await request.json();
+    const now = Date.now();
 
-    purgeInactivePlayers();
+    // Cleanup inactive
+    for (const [pid, pdata] of players.entries()) {
+        if (now - pdata.lastSeen > 5000) players.delete(pid);
+    }
 
     if (action === 'update') {
-        // Update speler positie
-        players.set(id, {
-            ...payload,
-            id,
-            lastSeen: Date.now()
-        });
-    } 
-    else if (action === 'death') {
-        // Iedereen verliest een leven
-        globalGameState.sharedLives = Math.max(0, globalGameState.sharedLives - 1);
-    } 
-    else if (action === 'finish') {
-        // Level gehaald: genereer nieuw seed en reset vlag
-        if (!globalGameState.isLevelComplete) {
-            globalGameState.isLevelComplete = true;
-            globalGameState.levelSeed = Math.floor(Math.random() * 1000000);
-            // Korte delay zodat clients de overgang kunnen zien
-            setTimeout(() => { globalGameState.isLevelComplete = false; }, 2000);
+        players.set(id, { ...payload, id, lastSeen: now });
+    } else if (action === 'death') {
+        globalState.sharedLives = Math.max(0, globalState.sharedLives - 1);
+    } else if (action === 'score') {
+        globalState.sharedScore += payload.amount;
+        if (payload.isStar) globalState.sharedStars += 1;
+    } else if (action === 'finish') {
+        if (!globalState.isLevelComplete) {
+            globalState.isLevelComplete = true;
+            globalState.levelSeed = Math.floor(Math.random() * 1000000);
+            setTimeout(() => { globalState.isLevelComplete = false; }, 3000);
         }
     }
-    else if (action === 'collectStar') {
-        globalGameState.totalStarsCollected++;
-    }
-
-    const otherPlayers = Array.from(players.values()).filter(p => p.id !== id);
 
     return json({
-        gameState: globalGameState,
-        players: otherPlayers
+        gameState: globalState,
+        players: Array.from(players.values()).filter(p => p.id !== id)
     });
 };
