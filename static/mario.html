@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Mario - Mega Building Update</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #5c94fc;
+            font-family: 'Segoe UI', sans-serif;
+            user-select: none;
+        }
+
+        /* Nieuwe Compacte UI Rechtsboven */
+        #stats-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .heart-icon { color: #ff4444; font-size: 20px; }
+        .star-icon { color: #ffd700; font-size: 20px; }
+        .score-icon { color: #4caf50; font-size: 20px; }
+
+        /* Settings knop */
+        #settings-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: auto;
+            cursor: pointer;
+            font-size: 24px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+            z-index: 11;
+        }
+        #settings-btn:hover { transform: scale(1.1); background: rgba(0,0,0,0.8); }
+
+        /* Settings Menu */
+        #settings-menu {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 40, 0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #5c94fc;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 100;
+            width: 300px;
+            text-align: center;
+        }
+
+        .setting-row { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #88ccff; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .val-display { float: right; color: #f8b800; }
+
+        /* Instructies & Game Over */
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+            pointer-events: none;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            border: 4px solid gold;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+            z-index: 20;
+        }
+
+        button.menu-btn {
+            background: linear-gradient(to bottom, #f8b800, #d49000);
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #333;
+            box-shadow: 0 4px 0 #b07000;
+            transition: transform 0.1s;
+        }
+        button.menu-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #b07000; }
+
+        /* Powerup Pop-up */
+        #powerup-msg {
+            display: none;
+            color: #ffff00;
+            font-size: 30px;
+            font-weight: bold;
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-shadow: 0 0 10px #ff0000, 2px 2px 0px #000;
+            animation: popUp 1s forwards;
+            pointer-events: none;
+        }
+
+        /* Checkpoint bericht */
+        #checkpoint-msg {
+            display: none;
+            color: #00ff00;
+            font-size: 24px;
+            font-weight: bold;
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-shadow: 2px 2px 4px #000;
+            animation: fadeUp 2s forwards;
+            pointer-events: none;
+        }
+
+        @keyframes popUp {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -150%) scale(1); opacity: 0; }
+        }
+        @keyframes fadeUp {
+            0% { transform: translate(-50%, 0); opacity: 0; }
+            20% { transform: translate(-50%, -20px); opacity: 1; }
+            80% { transform: translate(-50%, -20px); opacity: 1; }
+            100% { transform: translate(-50%, -50px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="settings-btn" onclick="openSettings()">⚙️</button>
+
+    <div id="stats-container">
+        <div class="stat-box">
+            <span class="heart-icon">❤️</span> <span id="lives">3</span>
+        </div>
+        <div class="stat-box">
+            <span class="star-icon">⭐</span> <span id="stars">0</span> / <span id="total-stars">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="score-icon">🏆</span> <span id="score">0</span>
+        </div>
+    </div>
+    
+    <div id="powerup-msg">POWER UP!</div>
+    <div id="checkpoint-msg">CHECKPOINT BEREIKT!</div>
+
+    <!-- Instellingen Menu -->
+    <div id="settings-menu">
+        <h2 style="color: gold; text-shadow: 2px 2px 0 #000;">Instellingen</h2>
+        
+        <div class="setting-row">
+            <label>Level Lengte (Segmenten) <span id="val-len" class="val-display">8</span></label>
+            <input type="range" id="opt-length" min="4" max="20" step="1" value="8" oninput="updateSettingsUI()">
+        </div>
+
+        <div class="setting-row">
+            <label>Gevoeligheid <span id="val-sens" class="val-display">4</span></label>
+            <input type="range" id="opt-sens" min="1" max="20" step="1" value="4" oninput="updateSettingsUI()">
+        </div>
+
+        <div class="setting-row">
+            <label>Max FPS <span id="val-fps" class="val-display">60</span></label>
+            <input type="range" id="opt-fps" min="30" max="144" step="30" value="60" oninput="updateSettingsUI()">
+        </div>
+
+        <button class="menu-btn" onclick="closeSettings()">Opslaan & Sluiten</button>
+    </div>
+
+    <div id="instructions">
+        <b>WASD</b> lopen | <b>Spatie (x2)</b> springen | <b>F</b> vuurbal | <b>Muis</b> kijken
+    </div>
+
+    <div id="game-over">
+        <h1 id="status-text">GEWONNEN!</h1>
+        <p id="end-msg">Je hebt de vlag bereikt!</p>
+        <button class="menu-btn" onclick="restartGame(true)">Opnieuw Spelen</button>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- CONFIGURATIE & SETTINGS ---
+        let gameConfig = {
+            levelLength: 8, // Aantal gebouwen/segmenten
+            sensitivity: 0.002, 
+            maxFPS: 60
+        };
+
+        // FPS Control
+        let fpsInterval, now, then, elapsed;
+
+        let scene, camera, renderer, player, clock;
+        let platforms = [];
+        let movingPlatforms = [];
+        let stars = [];
+        let goombas = [];
+        let thwomps = []; 
+        let bulletBills = [];
+        let bullets = []; 
+        let particles = [];
+        let powerups = []; 
+        let projectiles = [];
+        let clouds = [];
+        let checkpoints = []; 
+        let flag = null;
+        let score = 0;
+        let starsCollected = 0;
+        let totalStarsInLevel = 0;
+        let isGameOver = false;
+        let isPaused = false;
+
+        // Player Stats & Lives
+        let lives = 3;
+        let currentCheckpoint = { x: 0, y: 5, z: 0, rot: Math.PI }; 
+        let isBig = false;
+        let hasFirePower = false;
+        let isImmune = false; 
+
+        // Input
+        const keys = {};
+        let targetRotationY = Math.PI;
+        let targetRotationX = 0.4;
+
+        // Physics
+        const gravity = -0.015;
+        let velocityX = 0;
+        let velocityZ = 0;
+        let velocityY = 0;
+        const acceleration = 0.025; 
+        const friction = 0.85;      
+        const maxSpeed = 0.35;      
+
+        // Jump
+        let jumpCount = 0;
+        const maxJumps = 2; 
+        let currentPlatform = null;
+
+        // Textures Cache
+        const textures = {};
+
+        // --- TEXTURE GENERATOR ---
+        function generateTextures() {
+            function getCtx(w, h) {
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                return {c, ctx: c.getContext('2d')};
+            }
+
+            // Gras
+            let t = getCtx(256, 256);
+            t.ctx.fillStyle = '#2e7d32'; t.ctx.fillRect(0,0,256,256);
+            for(let i=0; i<3000; i++) {
+                t.ctx.fillStyle = Math.random() > 0.5 ? '#4caf50' : '#1b5e20';
+                t.ctx.fillRect(Math.random()*256, Math.random()*256, 2+Math.random()*4, 2+Math.random()*4);
+            }
+            textures['grass'] = new THREE.CanvasTexture(t.c);
+            textures['grass'].wrapS = textures['grass'].wrapT = THREE.RepeatWrapping;
+
+            // Baksteen
+            t = getCtx(256, 256);
+            t.ctx.fillStyle = '#8d6e63'; t.ctx.fillRect(0,0,256,256); t.ctx.fillStyle = '#bf360c';
+            for(let y=0; y<4; y++) for(let x=0; x<4; x++) {
+                let offX = (y % 2 === 0) ? 0 : 32;
+                t.ctx.fillRect((x*64 + offX) % 256 + 2, y*64 + 2, 60, 60);
+                t.ctx.fillStyle = 'rgba(0,0,0,0.1)'; t.ctx.fillRect((x*64 + offX) % 256 + 10, y*64 + 10, 40, 40); t.ctx.fillStyle = '#bf360c';
+            }
+            textures['brick'] = new THREE.CanvasTexture(t.c);
+            textures['brick'].wrapS = textures['brick'].wrapT = THREE.RepeatWrapping;
+
+            // Steen
+            t = getCtx(256, 256);
+            t.ctx.fillStyle = '#757575'; t.ctx.fillRect(0,0,256,256);
+            for(let i=0; i<500; i++) {
+                t.ctx.fillStyle = Math.random() > 0.5 ? '#9e9e9e' : '#616161';
+                t.ctx.beginPath(); t.ctx.arc(Math.random()*256, Math.random()*256, Math.random()*10+2, 0, Math.PI*2); t.ctx.fill();
+            }
+            textures['stone'] = new THREE.CanvasTexture(t.c);
+            textures['stone'].wrapS = textures['stone'].wrapT = THREE.RepeatWrapping;
+
+             // Hout
+             t = getCtx(256, 256);
+            t.ctx.fillStyle = '#6d4c41'; t.ctx.fillRect(0,0,256,256); t.ctx.fillStyle = '#4e342e';
+            for(let i=0; i<20; i++) t.ctx.fillRect(0, i*12.8 + Math.random()*5, 256, 2);
+            textures['wood'] = new THREE.CanvasTexture(t.c);
+            textures['wood'].wrapS = textures['wood'].wrapT = THREE.RepeatWrapping;
+
+            // Goud
+            t = getCtx(128, 128);
+            t.ctx.fillStyle = '#ffd700'; t.ctx.fillRect(0,0,128,128); t.ctx.fillStyle = '#ffecb3'; t.ctx.fillRect(10,10, 50,50);
+            textures['gold'] = new THREE.CanvasTexture(t.c);
+        }
+
+        // --- UI FUNCTIES ---
+        function updateSettingsUI() {
+            document.getElementById('val-len').innerText = document.getElementById('opt-length').value;
+            document.getElementById('val-sens').innerText = document.getElementById('opt-sens').value;
+            let fpsVal = document.getElementById('opt-fps').value;
+            document.getElementById('val-fps').innerText = fpsVal > 120 ? "Max" : fpsVal;
+        }
+
+        function openSettings() {
+            isPaused = true;
+            document.exitPointerLock();
+            document.getElementById('settings-menu').style.display = 'block';
+        }
+
+        function closeSettings() {
+            let oldLen = gameConfig.levelLength;
+            gameConfig.levelLength = parseInt(document.getElementById('opt-length').value);
+            gameConfig.sensitivity = parseInt(document.getElementById('opt-sens').value) * 0.0005;
+            gameConfig.maxFPS = parseInt(document.getElementById('opt-fps').value);
+
+            fpsInterval = 1000 / gameConfig.maxFPS;
+
+            document.getElementById('settings-menu').style.display = 'none';
+            isPaused = false;
+            renderer.domElement.requestPointerLock();
+
+            if (oldLen !== gameConfig.levelLength) {
+                restartGame(true);
+            } else {
+                animate();
+            }
+        }
+
+        // --- INITIALISATIE ---
+        function init() {
+            generateTextures(); 
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x6fa8ff);
+            scene.fog = new THREE.Fog(0x6fa8ff, 20, 150);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+            renderer.outputEncoding = THREE.sRGBEncoding; 
+            document.body.appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            // Licht
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7); 
+            hemiLight.position.set(0, 50, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(50, 80, 50); 
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.bias = -0.0005; 
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 300;
+            dirLight.shadow.camera.left = -100; dirLight.shadow.camera.right = 100;
+            dirLight.shadow.camera.top = 100; dirLight.shadow.camera.bottom = -100;
+            scene.add(dirLight);
+
+            const ambient = new THREE.AmbientLight(0x404040, 0.5); 
+            scene.add(ambient);
+
+            createPlayer();
+            createClouds(); 
+            generateLevel();
+
+            // Events
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', e => keys[e.code] = false);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('resize', onWindowResize);
+
+            renderer.domElement.addEventListener('click', () => {
+                if (!isPaused && !isGameOver) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+
+            fpsInterval = 1000 / gameConfig.maxFPS;
+            then = Date.now();
+            animate();
+        }
+
+        function restartGame(fullReset) {
+            if (fullReset) {
+                lives = 3;
+                score = 0;
+                starsCollected = 0;
+                currentCheckpoint = { x: 0, y: 5, z: 0, rot: Math.PI };
+                generateLevel();
+            }
+
+            player.position.set(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
+            targetRotationY = currentCheckpoint.rot; 
+            player.rotation.set(0, targetRotationY, 0);
+            
+            velocityX = 0; velocityZ = 0; velocityY = 0;
+            jumpCount = 0;
+            currentPlatform = null;
+            
+            isBig = false;
+            hasFirePower = false;
+            isImmune = true; 
+            setTimeout(() => { isImmune = false; }, 2000); 
+
+            updatePlayerAppearance();
+            player.scale.set(1, 1, 1);
+            
+            document.getElementById('lives').innerText = lives;
+            document.getElementById('score').innerText = score;
+            document.getElementById('stars').innerText = starsCollected;
+            document.getElementById('game-over').style.display = 'none';
+            
+            isGameOver = false;
+            isPaused = false;
+            renderer.domElement.requestPointerLock();
+        }
+
+        function handlePlayerDeath() {
+            if (isImmune || isGameOver) return;
+            
+            lives--;
+            document.getElementById('lives').innerText = lives;
+
+            if (lives > 0) {
+                restartGame(false);
+            } else {
+                endGame(false);
+            }
+        }
+
+        function onKeyDown(e) {
+            if (isGameOver || isPaused) return;
+            keys[e.code] = true;
+
+            if (e.code === 'Space') {
+                if (jumpCount < maxJumps) {
+                    velocityY = 0.42; 
+                    jumpCount++;
+                    currentPlatform = null;
+                    if (jumpCount === 2) {
+                        createJumpEffect(player.position.x, player.position.y - 0.5, player.position.z);
+                        velocityY = 0.45;
+                    }
+                }
+            }
+
+            if (e.code === 'KeyF' && hasFirePower) {
+                shootFireball();
+            }
+        }
+
+        function checkOverlap(x, y, z, w, h, d) {
+            const margin = 0.5;
+            for (let p of platforms) {
+                if (Math.abs(x - p.mesh.position.x) < (w + p.w) / 2 + margin &&
+                    Math.abs(y - p.mesh.position.y) < (h + p.h) / 2 + margin &&
+                    Math.abs(z - p.mesh.position.z) < (d + p.d) / 2 + margin) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // --- LEVEL GENERATOR ---
+        function clearWorld() {
+            platforms.forEach(p => scene.remove(p.mesh)); platforms = []; movingPlatforms = [];
+            stars.forEach(s => scene.remove(s)); stars = []; totalStarsInLevel = 0;
+            goombas.forEach(g => scene.remove(g.mesh)); goombas = [];
+            thwomps.forEach(t => scene.remove(t.mesh)); thwomps = [];
+            bulletBills.forEach(b => scene.remove(b.mesh)); bulletBills = [];
+            bullets.forEach(b => scene.remove(b.mesh)); bullets = [];
+            powerups.forEach(p => scene.remove(p.mesh)); powerups = [];
+            projectiles.forEach(p => scene.remove(p.mesh)); projectiles = [];
+            particles.forEach(p => scene.remove(p)); particles = [];
+            checkpoints.forEach(cp => scene.remove(cp.mesh)); checkpoints = []; 
+            if (flag) { scene.remove(flag); flag = null; }
+        }
+
+        function createClouds() {
+            clouds.forEach(c => scene.remove(c));
+            clouds = [];
+            const geo = new THREE.BoxGeometry(1,1,1);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8 });
+            for(let i=0; i<30; i++) {
+                const cloud = new THREE.Group();
+                const parts = 3 + Math.floor(Math.random() * 4);
+                for(let j=0; j<parts; j++) {
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(j*0.8 + Math.random()*0.5, Math.random()*0.5, Math.random()*0.5);
+                    mesh.scale.set(2 + Math.random(), 1 + Math.random(), 1.5 + Math.random());
+                    cloud.add(mesh);
+                }
+                cloud.position.set((Math.random()-0.5)*200, 30 + Math.random()*20, (Math.random()-0.5)*200);
+                scene.add(cloud);
+                clouds.push({mesh: cloud, speed: 0.02 + Math.random() * 0.03});
+            }
+        }
+
+        function updateClouds() {
+            clouds.forEach(c => {
+                c.mesh.position.x += c.speed;
+                if(c.mesh.position.x > 100) c.mesh.position.x = -100;
+            });
+        }
+
+        function createCheckpoint(x, y, z) {
+            const group = new THREE.Group();
+            const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            const pole = new THREE.Mesh(poleGeo, poleMat); pole.position.y = 1; group.add(pole);
+            const flagGeo = new THREE.BoxGeometry(0.8, 0.6, 0.05);
+            const flagMat = new THREE.MeshStandardMaterial({ color: 0x00FF00, emissive: 0x003300 });
+            const flagMesh = new THREE.Mesh(flagGeo, flagMat); flagMesh.position.set(0.4, 1.6, 0); group.add(flagMesh);
+            group.position.set(x, y, z); scene.add(group);
+            checkpoints.push({ mesh: group, flagMesh: flagMesh, active: false, pos: { x: x, y: y + 1, z: z } });
+        }
+
+        // --- GENERATOR LOGICA MET RANDOMISATIE ---
+        function generateLevel() {
+            clearWorld();
+
+            createPlatform(0, 0, 0, 8, 1, 8, 'grass', 'box');
+
+            let currentX = 0; let currentY = 0; let currentZ = 0;
+            let currentAngle = -Math.PI; 
+            
+            // Beschikbare gebouwen (Type + indicatie grootte/moeilijkheid)
+            const availableBuildings = [
+                // Origineel (4)
+                { type: 'tower', steps: 5 },
+                { type: 'spiral', steps: 4 },
+                { type: 'ruins', steps: 6 },
+                { type: 'castle', steps: 5 },
+                // MEGA (1)
+                { type: 'skyFortress', steps: 8 },
+                // Groot (3)
+                { type: 'clockTower', steps: 5 },
+                { type: 'twinTowers', steps: 6 },
+                { type: 'colosseum', steps: 6 },
+                // Medium (3)
+                { type: 'lighthouse', steps: 4 },
+                { type: 'windmill', steps: 4 },
+                { type: 'greenhouse', steps: 4 },
+                // Klein (3)
+                { type: 'well', steps: 3 },
+                { type: 'shrine', steps: 3 },
+                { type: 'gazebo', steps: 3 }
+            ];
+
+            const totalSegments = gameConfig.levelLength;
+            const minJumpDist = 4.5;
+            const maxJumpDist = 7.5;
+
+            for (let s = 0; s < totalSegments; s++) {
+                // KIES WILLEKEURIG GEBOUW
+                const seg = availableBuildings[Math.floor(Math.random() * availableBuildings.length)];
+
+                // 1. Pad genereren
+                for(let i=0; i<seg.steps; i++) {
+                    let angleChange = (Math.random() - 0.5) * 0.8; 
+                    currentAngle += angleChange;
+
+                    let distance = minJumpDist + Math.random() * (maxJumpDist - minJumpDist);
+                    let nextX = currentX + Math.sin(currentAngle) * distance;
+                    let nextZ = currentZ + Math.cos(currentAngle) * distance;
+                    let yChange = (Math.random() * 3.0) - 1.0; 
+                    if (currentY + yChange < -5) yChange = Math.abs(yChange);
+                    let nextY = currentY + yChange;
+
+                    let w = 3 + Math.random() * 2;
+                    let d = 3 + Math.random() * 2;
+                    let matType = (Math.random() > 0.7) ? 'wood' : 'grass';
+                    
+                    if (Math.random() < 0.2) {
+                        let moveType = Math.random() > 0.5 ? 'horizontal' : 'vertical';
+                        let pColor = moveType === 'horizontal' ? 0x0088ff : 0x9932CC; 
+                        createMovingPlatform(nextX, nextY, nextZ, 4, 1, 4, pColor, moveType);
+                    } else {
+                        createPlatform(nextX, nextY, nextZ, w, 1, d, matType, 'box');
+                        if (Math.random() < 0.1) createPowerup(nextX, nextY + 1.0, nextZ, Math.random() > 0.5 ? 'mushroom' : 'flower');
+                        else if (Math.random() < 0.3) addStar(nextX, nextY + 1.5, nextZ);
+                        if (w > 3.5 && Math.random() < 0.3) createGoomba(nextX, nextY + 0.5, nextZ, w, d);
+                    }
+                    currentX = nextX; currentY = nextY; currentZ = nextZ;
+                }
+
+                // 2. Brug naar gebouw
+                let bridgeDist = 9.0;
+                currentX += Math.sin(currentAngle) * bridgeDist;
+                currentZ += Math.cos(currentAngle) * bridgeDist;
+                createPlatform(currentX, currentY, currentZ, 3, 1, 3, 'stone', 'box');
+
+                // 3. Bouw Gebouw
+                let buildDist = 12.0; 
+                let bX = currentX + Math.sin(currentAngle) * buildDist;
+                let bZ = currentZ + Math.cos(currentAngle) * buildDist;
+                let bY = currentY;
+
+                let exitPoint = { x: bX, y: bY, z: bZ }; // Defaultfallback
+
+                // Switch voor alle types
+                switch(seg.type) {
+                    case 'tower': exitPoint = createBuildingTower(bX, bY, bZ); break;
+                    case 'spiral': exitPoint = createSpiralStaircase(bX, bY, bZ); break;
+                    case 'ruins': exitPoint = createFloatingRuins(bX, bY, bZ); break;
+                    case 'castle': exitPoint = createBuildingCastle(bX, bY, bZ); break;
+                    
+                    case 'skyFortress': exitPoint = createSkyFortress(bX, bY, bZ); break;
+                    case 'clockTower': exitPoint = createClockTower(bX, bY, bZ); break;
+                    case 'twinTowers': exitPoint = createTwinTowers(bX, bY, bZ); break;
+                    case 'colosseum': exitPoint = createColosseum(bX, bY, bZ); break;
+                    
+                    case 'lighthouse': exitPoint = createLighthouse(bX, bY, bZ); break;
+                    case 'windmill': exitPoint = createWindmill(bX, bY, bZ); break;
+                    case 'greenhouse': exitPoint = createGreenhouse(bX, bY, bZ); break;
+                    
+                    case 'well': exitPoint = createWell(bX, bY, bZ); break;
+                    case 'shrine': exitPoint = createShrine(bX, bY, bZ); break;
+                    case 'gazebo': exitPoint = createGazebo(bX, bY, bZ); break;
+                }
+                
+                createCheckpoint(exitPoint.x, exitPoint.y, exitPoint.z);
+                currentX = exitPoint.x; currentY = exitPoint.y; currentZ = exitPoint.z;
+            }
+
+            let finDist = 10.0;
+            currentX += Math.sin(currentAngle) * finDist; currentZ += Math.cos(currentAngle) * finDist;
+            createPlatform(currentX, currentY, currentZ, 6, 1, 6, 'gold', 'box');
+            createFlag(currentX, currentY + 0.5, currentZ);
+            document.getElementById('total-stars').innerText = totalStarsInLevel;
+        }
+
+        // --- GEBOUW DEFINITIES (OUD & NIEUW) ---
+
+        // 1. Sky Fortress (MEGA)
+        function createSkyFortress(x, y, z) {
+            createPlatform(x, y, z, 20, 2, 20, 'stone', 'box'); // Base
+            createPlatform(x, y+5, z, 10, 8, 10, 'brick', 'box'); // Keep
+            // Torens op hoeken
+            const d = 8;
+            [1, -1].forEach(dx => [1, -1].forEach(dz => {
+                createPlatform(x + dx*d, y+4, z + dz*d, 4, 10, 4, 'stone', 'box');
+            }));
+            // Bovenop
+            createGoomba(x, y+9.5, z, 10, 10);
+            createThwomp(x, y+15, z);
+            return { x: x, y: y+9, z: z+12 };
+        }
+
+        // 2. Clock Tower (Groot)
+        function createClockTower(x, y, z) {
+            createPlatform(x, y, z, 8, 1, 8, 'brick', 'box');
+            createPlatform(x, y+10, z, 4, 20, 4, 'brick', 'box'); // Toren
+            createPlatform(x, y+18, z+2.1, 2, 2, 0.2, 0xFFFFFF, 'box'); // Klok
+            createBulletBill(x, y+2, z+5, Math.PI);
+            return { x: x, y: y, z: z+6 };
+        }
+
+        // 3. Twin Towers (Groot)
+        function createTwinTowers(x, y, z) {
+            createPlatform(x-5, y+6, z, 4, 12, 4, 'stone', 'box');
+            createPlatform(x+5, y+6, z, 4, 12, 4, 'stone', 'box');
+            createPlatform(x, y+10, z, 8, 1, 3, 'wood', 'box'); // Brug
+            createGoomba(x, y+10.5, z, 8, 3);
+            return { x: x, y: y+10, z: z };
+        }
+
+        // 4. Colosseum (Groot)
+        function createColosseum(x, y, z) {
+            createPlatform(x, y, z, 16, 1, 16, 'stone', 'box');
+            // Ring van pilaren
+            for(let i=0; i<8; i++) {
+                let ang = (i/8)*Math.PI*2;
+                createPlatform(x + Math.cos(ang)*7, y+3, z + Math.sin(ang)*7, 2, 6, 2, 'brick', 'box');
+            }
+            createThwomp(x, y+5, z);
+            return { x: x, y: y, z: z+9 };
+        }
+
+        // 5. Lighthouse (Medium)
+        function createLighthouse(x, y, z) {
+            createPlatform(x, y, z, 6, 1, 6, 'stone', 'box'); // Base
+            createPlatform(x, y+4, z, 3, 8, 3, 0xFF0000, 'cylinder'); // Rood
+            createPlatform(x, y+9, z, 2.8, 2, 2.8, 0xFFFFFF, 'cylinder'); // Wit
+            createPlatform(x, y+11, z, 3, 1, 3, 'gold', 'box'); // Top
+            return { x: x, y: y, z: z+5 };
+        }
+
+        // 6. Windmill (Medium)
+        function createWindmill(x, y, z) {
+            createPlatform(x, y, z, 6, 1, 6, 'grass', 'box');
+            createPlatform(x, y+3, z, 3, 6, 3, 'wood', 'box'); // Huis
+            // Wieken (Statisch voor nu)
+            createPlatform(x, y+4, z+1.6, 8, 0.5, 0.5, 0xFFFFFF, 'box');
+            createPlatform(x, y+4, z+1.6, 0.5, 8, 0.5, 0xFFFFFF, 'box');
+            return { x: x, y: y, z: z+5 };
+        }
+
+        // 7. Greenhouse (Medium)
+        function createGreenhouse(x, y, z) {
+            createPlatform(x, y, z, 8, 1, 8, 'grass', 'box');
+            // Frame
+            createPlatform(x-3, y+2, z-3, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x+3, y+2, z-3, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x-3, y+2, z+3, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x+3, y+2, z+3, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x, y+4, z, 7, 0.5, 7, 0x88CCFF, 'box'); // Dak
+            createPowerup(x, y+1, z, 'flower');
+            return { x: x, y: y, z: z+6 };
+        }
+
+        // 8. Well (Klein)
+        function createWell(x, y, z) {
+            createPlatform(x, y, z, 5, 1, 5, 'stone', 'box');
+            createPlatform(x, y+1, z, 2, 1.5, 2, 0x000000, 'cylinder'); // Gat (nep)
+            createPlatform(x-1.5, y+2, z, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x+1.5, y+2, z, 0.5, 4, 0.5, 'wood', 'box');
+            createPlatform(x, y+4, z, 4, 0.5, 2, 'wood', 'box'); // Dakje
+            return { x: x, y: y, z: z+4 };
+        }
+
+        // 9. Shrine (Klein)
+        function createShrine(x, y, z) {
+            createPlatform(x, y, z, 5, 1, 5, 'stone', 'box');
+            createPlatform(x-1.5, y+1.5, z-1.5, 0.5, 3, 0.5, 0xFF0000, 'box');
+            createPlatform(x+1.5, y+1.5, z-1.5, 0.5, 3, 0.5, 0xFF0000, 'box');
+            createPlatform(x, y+3, z-1.5, 4, 0.5, 1, 0x222222, 'box'); // Torii top
+            addStar(x, y+1, z);
+            return { x: x, y: y, z: z+4 };
+        }
+
+        // 10. Gazebo (Klein)
+        function createGazebo(x, y, z) {
+            createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder');
+            for(let i=0; i<6; i++) {
+                let a = (i/6)*Math.PI*2;
+                createPlatform(x+Math.cos(a)*2, y+1.5, z+Math.sin(a)*2, 0.2, 3, 0.2, 'white', 'cylinder');
+            }
+            createPlatform(x, y+3, z, 5, 0.5, 5, 0xAA5500, 'cylinder'); // Dak
+            return { x: x, y: y, z: z+4 };
+        }
+
+        // OUDE GEBOUWEN
+        function createFloatingRuins(x, y, z) {
+            const size = 16;
+            const tileSize = 4;
+            for(let dx = -size/2; dx <= size/2; dx+=tileSize) {
+                for(let dz = -size/2; dz <= size/2; dz+=tileSize) {
+                    if(Math.random() > 0.2) {
+                        let py = y + (Math.random() * 0.5); 
+                        createPlatform(x + dx, py, z + dz, tileSize-0.2, 1, tileSize-0.2, 'stone', 'box');
+                        if(Math.random() < 0.15) createPlatform(x + dx, py + 1.5, z + dz, 1.5, 3, 1.5, 'brick', 'box');
+                        if(Math.random() < 0.1) createGoomba(x+dx, py+1, z+dz, tileSize, tileSize);
+                    }
+                }
+            }
+            createThwomp(x, y + 6, z);
+            return { x: x, y: y, z: z + size/2 + 2 }; 
+        }
+
+        function createSpiralStaircase(x, y, z) {
+            const steps = 12; const radius = 6; const heightStep = 1.2;
+            let lastX = x, lastY = y, lastZ = z;
+            createPlatform(x, y + (steps*heightStep)/2, z, 2, steps*heightStep, 2, 'brick', 'cylinder');
+            for(let i=0; i<steps; i++) {
+                let angle = (i / steps) * Math.PI * 2; 
+                let px = x + Math.cos(angle) * radius; let pz = z + Math.sin(angle) * radius; let py = y + (i * heightStep);
+                createPlatform(px, py, pz, 3, 0.5, 3, 'wood', 'box');
+                if (i % 3 === 0) addStar(px, py + 1, pz);
+                lastX = px; lastY = py; lastZ = pz;
+            }
+            createBulletBill(x, lastY + 2, z, 0);
+            return { x: lastX, y: lastY, z: lastZ };
+        }
+
+        function createBuildingTower(x, y, z) {
+            createPlatform(x, y, z, 14, 1, 14, 'stone', 'box');
+            const h = 18; const w = 2; const offset = 6; const colColor = 0x505050; 
+            createPlatform(x - offset, y + h/2, z - offset, w, h, w, colColor, 'box'); createPlatform(x + offset, y + h/2, z - offset, w, h, w, colColor, 'box');
+            createPlatform(x + offset, y + h/2, z + offset, w, h, w, colColor, 'box'); createPlatform(x - offset, y + h/2, z + offset, w, h, w, colColor, 'box');
+            const stepH = 2.5; const stepW = 4; const stepD = 4;
+            createPlatform(x - 3.5, y + stepH, z - 3.5, stepW, 1, stepD, 'wood', 'box'); createPlatform(x + 3.5, y + stepH * 2, z - 3.5, stepW, 1, stepD, 'wood', 'box');
+            createGoomba(x + 3.5, y + stepH * 2 + 1, z - 3.5, stepW, stepD);
+            createPlatform(x + 3.5, y + stepH * 3, z + 3.5, stepW, 1, stepD, 'wood', 'box'); createPlatform(x - 3.5, y + stepH * 4, z + 3.5, stepW, 1, stepD, 'wood', 'box');
+            return { x: x - 3.5, y: y + stepH * 4, z: z + 3.5 };
+        }
+
+        function createBuildingCastle(x, y, z) {
+            const wallH = 4; const wallD = 16; const floorW = 8;
+            createPlatform(x, y, z, floorW, 1, wallD, 'stone', 'box');
+            createPlatform(x - 5, y + 2, z, 1, wallH, wallD, 'brick', 'box'); createPlatform(x + 5, y + 2, z, 1, wallH, wallD, 'brick', 'box');
+            for(let i=0; i<4; i++) { let dz = z - 6 + (i * 4); createPlatform(x - 5, y + 5, dz, 1.5, 1, 1.5, 'brick', 'box'); createPlatform(x + 5, y + 5, dz, 1.5, 1, 1.5, 'brick', 'box'); }
+            createThwomp(x, y + 5, z);
+            return { x: x, y: y, z: z + 9 }; 
+        }
+
+        // --- HULPFUNCTIES & VIJANDEN ---
+        
+        function createMovingPlatform(x, y, z, w, h, d, color, moveType) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ 
+                color: color, roughness: 0.2, metalness: 0.6, emissive: moveType === 'vertical' ? 0x220022 : 0x001133 
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z); mesh.receiveShadow = true; mesh.castShadow = true; scene.add(mesh);
+            const platformObj = { mesh, w, h, d, type: 'box', isMoving: true, moveType, startPosX: x, startPosY: y, speed: 0.03 + Math.random() * 0.02, range: 3.5, timeOffset: Math.random() * 100 };
+            platforms.push(platformObj); movingPlatforms.push(platformObj);
+        }
+
+        function createPlatform(x, y, z, w, h, d, typeOrColor, shapeType) {
+            let geo;
+            if (shapeType === 'cylinder') { 
+                const radius = (w + d) / 4; 
+                geo = new THREE.CylinderGeometry(radius, radius, h, 32);
+            } else { 
+                geo = new THREE.BoxGeometry(w, h, d);
+            }
+
+            let mat;
+            if (typeof typeOrColor === 'string' && textures[typeOrColor]) {
+                const tex = textures[typeOrColor].clone(); 
+                tex.needsUpdate = true;
+                if(shapeType === 'box') {
+                    tex.repeat.set(Math.max(1, w/2), Math.max(1, d/2));
+                } else {
+                    tex.repeat.set(2, 1);
+                }
+                mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 });
+            } else {
+                mat = new THREE.MeshStandardMaterial({ color: typeOrColor, roughness: 0.6, metalness: 0.1 });
+            }
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z); mesh.receiveShadow = true; mesh.castShadow = true; scene.add(mesh);
+            platforms.push({ mesh, w, h, d, type: shapeType });
+        }
+
+        function createPowerup(x, y, z, type) {
+            const group = new THREE.Group();
+            if (type === 'mushroom') {
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.4), new THREE.MeshStandardMaterial({color: 0xFFFFFF}));
+                const cap = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16, 0, Math.PI * 2, 0, Math.PI/2), new THREE.MeshStandardMaterial({color: 0xFF0000, roughness: 0.2, metalness: 0.2}));
+                cap.position.y = 0.2; group.add(stem); group.add(cap);
+            } else if (type === 'flower') {
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5), new THREE.MeshStandardMaterial({color: 0x00AA00}));
+                const center = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({color: 0xFFFF00, emissive: 0x555500}));
+                center.position.y = 0.3;
+                const petalGeo = new THREE.SphereGeometry(0.15); const petalMat = new THREE.MeshStandardMaterial({color: 0xFF4400});
+                [0, 1.57, 3.14, 4.71].forEach(angle => { const petal = new THREE.Mesh(petalGeo, petalMat); petal.position.set(Math.cos(angle)*0.25, 0.3, Math.sin(angle)*0.25); group.add(petal); });
+                group.add(stem); group.add(center);
+            }
+            group.position.set(x, y, z);
+            group.userData = { type: type, startY: y, floatOffset: Math.random() * 100 };
+            scene.add(group); powerups.push({ mesh: group, type: type });
+        }
+
+        function collectPowerup(type) {
+            const msg = document.getElementById('powerup-msg');
+            msg.style.display = 'none'; void msg.offsetWidth; msg.style.display = 'block';
+            if (type === 'mushroom') {
+                msg.innerText = "SUPER MUSHROOM!"; msg.style.color = "#FF4444";
+                if (!isBig) { player.scale.set(1.5, 1.5, 1.5); isBig = true; velocityY = 0.2; }
+            } else if (type === 'flower') {
+                msg.innerText = "FIRE FLOWER!"; msg.style.color = "#FFAA00";
+                hasFirePower = true; updatePlayerAppearance();
+            }
+            score += 500;
+        }
+
+        function updatePlayerAppearance() {
+            const body = player.children[0]; const cap = player.children[1]; const pants = player.children[5];
+            if (hasFirePower) { body.material.color.setHex(0xFFFFFF); cap.material.color.setHex(0xFFFFFF); pants.material.color.setHex(0xFF0000); } 
+            else { body.material.color.setHex(0xFF0000); cap.material.color.setHex(0xB83000); pants.material.color.setHex(0x0000AA); }
+        }
+
+        function shootFireball() {
+            const geo = new THREE.SphereGeometry(0.25);
+            const mat = new THREE.MeshStandardMaterial({color: 0xFF4400, emissive: 0xFF0000});
+            const fireball = new THREE.Mesh(geo, mat);
+            const dirX = Math.sin(player.rotation.y); const dirZ = Math.cos(player.rotation.y);
+            fireball.position.set(player.position.x + dirX * 0.8, player.position.y + 0.5 * player.scale.y, player.position.z + dirZ * 0.8);
+            fireball.userData = { vx: dirX * 0.4, vz: dirZ * 0.4, vy: -0.05, life: 60 };
+            scene.add(fireball); projectiles.push({ mesh: fireball });
+        }
+
+        function updateProjectiles() {
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i]; const mesh = p.mesh; const data = mesh.userData;
+                mesh.position.x += data.vx; mesh.position.z += data.vz;
+                if (mesh.position.y < -5) data.life = 0;
+                mesh.rotation.x += 0.2; mesh.rotation.z += 0.2;
+                for(let j = goombas.length - 1; j >= 0; j--) {
+                    const g = goombas[j];
+                    if (mesh.position.distanceTo(g.mesh.position) < 1.5) {
+                        scene.remove(g.mesh); goombas.splice(j, 1);
+                        createJumpEffect(g.mesh.position.x, g.mesh.position.y, g.mesh.position.z);
+                        data.life = 0; score += 200; document.getElementById('score').innerText = score; break;
+                    }
+                }
+                data.life--; if(data.life <= 0) { scene.remove(mesh); projectiles.splice(i, 1); }
+            }
+        }
+
+        function createJumpEffect(x, y, z) {
+            for(let i=0; i<8; i++) {
+                const geo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8 });
+                const part = new THREE.Mesh(geo, mat);
+                part.position.set(x + (Math.random()-0.5), y, z + (Math.random()-0.5));
+                part.userData = { velX: (Math.random() - 0.5) * 0.1, velY: (Math.random() * 0.1), velZ: (Math.random() - 0.5) * 0.1, life: 1.0 };
+                scene.add(part); particles.push(part);
+            }
+        }
+
+        function updateParticles() {
+            for(let i=particles.length-1; i>=0; i--) {
+                const p = particles[i];
+                p.position.x += p.userData.velX; p.position.y += p.userData.velY; p.position.z += p.userData.velZ;
+                p.userData.life -= 0.03; p.material.opacity = p.userData.life; p.scale.setScalar(p.userData.life);
+                if(p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
+            }
+        }
+
+        function createFlag(x, y, z) {
+            flag = new THREE.Group();
+            const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 4, 8); const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.6, roughness: 0.2 }); const pole = new THREE.Mesh(poleGeo, poleMat); pole.position.y = 2; pole.castShadow = true; flag.add(pole);
+            const sailGeo = new THREE.BoxGeometry(1.5, 1, 0.1); const sailMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x004400 }); const sail = new THREE.Mesh(sailGeo, sailMat); sail.position.set(0.75, 3.5, 0); sail.castShadow = true; flag.add(sail);
+            const topGeo = new THREE.SphereGeometry(0.2); const topMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.1 }); const top = new THREE.Mesh(topGeo, topMat); top.position.y = 4; flag.add(top);
+            flag.position.set(x, y, z); scene.add(flag);
+        }
+
+        function addStar(x, y, z) {
+            const geo = new THREE.OctahedronGeometry(0.4, 0);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xaa6600, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.2 });
+            const star = new THREE.Mesh(geo, mat); star.position.set(x, y, z); scene.add(star);
+            stars.push(star); totalStarsInLevel++;
+        }
+
+        function updateStars() {
+            stars.forEach((star, index) => {
+                star.rotation.y += 0.05;
+                if (player.position.distanceTo(star.position) < 1.3) {
+                    scene.remove(star); stars.splice(index, 1); starsCollected++; score += 100; document.getElementById('score').innerText = score; document.getElementById('stars').innerText = starsCollected;
+                }
+            });
+        }
+        
+        function createBulletBill(x, y, z, angle) {
+            const group = new THREE.Group();
+            const baseGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.5 });
+            const base = new THREE.Mesh(baseGeo, baseMat); base.castShadow = true; group.add(base);
+            group.position.set(x, y, z);
+            group.rotation.y = angle + Math.PI; 
+            scene.add(group);
+            bulletBills.push({ mesh: group, shootTimer: Math.random() * 100, shootInterval: 200, direction: angle + Math.PI });
+        }
+
+        function createBullet(x, y, z, rotation) {
+            const group = new THREE.Group();
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 12); const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 }); const body = new THREE.Mesh(bodyGeo, bodyMat); body.rotation.x = Math.PI / 2; group.add(body);
+            const headGeo = new THREE.SphereGeometry(0.39, 12, 12, 0, Math.PI * 2, 0, Math.PI/2); const head = new THREE.Mesh(headGeo, bodyMat); head.position.z = 0.5; head.rotation.x = -Math.PI / 2; group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.2, 0.3); const eyeMat = new THREE.MeshStandardMaterial({color: 0xFFFFFF});
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(0.3, 0.1, 0.2); group.add(eyeL); const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(-0.3, 0.1, 0.2); group.add(eyeR);
+            group.position.set(x, y, z); group.rotation.y = rotation; scene.add(group);
+            bullets.push({ mesh: group, vx: Math.sin(rotation) * 0.15, vz: Math.cos(rotation) * 0.15, life: 300 });
+        }
+
+        function updateBulletBills() {
+            for(let bb of bulletBills) {
+                bb.shootTimer++;
+                if (bb.shootTimer > bb.shootInterval) {
+                    if (player.position.distanceTo(bb.mesh.position) < 40) {
+                        createBullet(bb.mesh.position.x, bb.mesh.position.y, bb.mesh.position.z, bb.direction);
+                        createJumpEffect(bb.mesh.position.x, bb.mesh.position.y, bb.mesh.position.z);
+                    }
+                    bb.shootTimer = 0;
+                }
+            }
+            for(let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.mesh.position.x += b.vx; b.mesh.position.z += b.vz;
+                if (b.mesh.position.distanceTo(player.position) < 1.0) {
+                     if (isBig) { isBig = false; player.scale.set(1, 1, 1); scene.remove(b.mesh); bullets.splice(i, 1); velocityY = 0.3; } 
+                     else { handlePlayerDeath(); } continue;
+                }
+                b.life--; if (b.life <= 0) { scene.remove(b.mesh); bullets.splice(i, 1); }
+            }
+        }
+
+        function createThwomp(x, y, z) {
+            const group = new THREE.Group();
+            const tex = textures['stone'].clone(); tex.repeat.set(1, 1);
+            const geo = new THREE.BoxGeometry(2, 2.5, 2); const mat = new THREE.MeshStandardMaterial({ map: tex, color: 0xa0a0a0 }); 
+            const body = new THREE.Mesh(geo, mat); body.castShadow = true; group.add(body);
+            
+            const eyeGeo = new THREE.BoxGeometry(0.5, 0.5, 0.1); const eyeMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, emissive: 0x222222 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.5, 0, 1.0); group.add(eyeL); const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.5, 0, 1.0); group.add(eyeR);
+            const pupGeo = new THREE.BoxGeometry(0.2, 0.2, 0.15); const pupMat = new THREE.MeshStandardMaterial({ color: 0xFF0000 }); 
+            const pupL = new THREE.Mesh(pupGeo, pupMat); pupL.position.set(-0.5, 0, 1.0); group.add(pupL); const pupR = new THREE.Mesh(pupGeo, pupMat); pupR.position.set(0.5, 0, 1.0); group.add(pupR);
+            const spikeGeo = new THREE.ConeGeometry(0.2, 0.5, 8); const spikeMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+            for(let i=0; i<4; i++) { const spike = new THREE.Mesh(spikeGeo, spikeMat); spike.rotation.x = Math.PI; spike.position.set( (i%2===0?0.6:-0.6), -1.25, (i<2?0.6:-0.6) ); group.add(spike); }
+            group.position.set(x, y, z); scene.add(group);
+            thwomps.push({ mesh: group, homeY: y, state: 'IDLE', timer: 0, speed: 0 });
+        }
+
+        function updateThwomps() {
+            for (let t of thwomps) {
+                const distToPlayer = Math.sqrt(Math.pow(player.position.x - t.mesh.position.x, 2) + Math.pow(player.position.z - t.mesh.position.z, 2));
+                switch (t.state) {
+                    case 'IDLE': if (distToPlayer < 2.5 && Math.abs(player.position.y - t.mesh.position.y) < 10) { t.state = 'FALLING'; t.speed = 0; } break;
+                    case 'FALLING': t.speed += 0.02; t.mesh.position.y -= t.speed; if (t.mesh.position.y < t.homeY - 5) { t.mesh.position.y = t.homeY - 5; t.state = 'WAITING'; t.timer = 60; } break;
+                    case 'WAITING': t.timer--; if (t.timer <= 0) t.state = 'RISING'; break;
+                    case 'RISING': t.mesh.position.y += 0.03; if (t.mesh.position.y >= t.homeY) { t.mesh.position.y = t.homeY; t.state = 'IDLE'; } break;
+                }
+                if (Math.abs(player.position.x - t.mesh.position.x) < 1.5 && Math.abs(player.position.z - t.mesh.position.z) < 1.5 && Math.abs(player.position.y - t.mesh.position.y) < 2.0) { handlePlayerDeath(); }
+            }
+        }
+
+        function createPlayer() {
+            player = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(1, 1, 1); const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.4, metalness: 0.1 }); const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow = true; player.add(body);
+            const capGeo = new THREE.BoxGeometry(1.05, 0.2, 0.5); const capMat = new THREE.MeshStandardMaterial({ color: 0xb83000 }); const cap = new THREE.Mesh(capGeo, capMat); cap.position.set(0, 0.2, 0.4); player.add(cap);
+            const faceGeo = new THREE.BoxGeometry(0.8, 0.5, 0.1); const faceMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 }); const face = new THREE.Mesh(faceGeo, faceMat); face.position.set(0, -0.1, 0.51); player.add(face);
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.2, 0.1); const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 }); const leftEye = new THREE.Mesh(eyeGeo, eyeMat); leftEye.position.set(-0.2, 0, 0.55); player.add(leftEye); const rightEye = new THREE.Mesh(eyeGeo, eyeMat); rightEye.position.set(0.2, 0, 0.55); player.add(rightEye);
+            const pantsGeo = new THREE.BoxGeometry(1.02, 0.4, 1.02); const pantsMat = new THREE.MeshStandardMaterial({ color: 0x0000aa }); const pants = new THREE.Mesh(pantsGeo, pantsMat); pants.position.set(0, -0.3, 0); player.add(pants);
+            player.position.set(0, 5, 0); scene.add(player);
+        }
+        
+        function createGoomba(x, y, z, pWidth, pDepth) {
+            const goombaGroup = new THREE.Group();
+            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8); const headMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.8 }); const head = new THREE.Mesh(headGeo, headMat); head.position.y = 0.4; head.castShadow = true; goombaGroup.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.25, 0.25, 0.1); const eyeMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.2, 0.5, 0.4); goombaGroup.add(eyeL); const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.2, 0.5, 0.4); goombaGroup.add(eyeR);
+            const pupGeo = new THREE.BoxGeometry(0.1, 0.1, 0.05); const pupMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            const pupL = new THREE.Mesh(pupGeo, pupMat); pupL.position.set(-0.2, 0.5, 0.45); goombaGroup.add(pupL); const pupR = new THREE.Mesh(pupGeo, pupMat); pupR.position.set(0.2, 0.5, 0.45); goombaGroup.add(pupR);
+            const footGeo = new THREE.BoxGeometry(0.3, 0.2, 0.4); const footMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            const footL = new THREE.Mesh(footGeo, footMat); footL.position.set(-0.25, 0.1, 0); goombaGroup.add(footL); const footR = new THREE.Mesh(footGeo, footMat); footR.position.set(0.25, 0.1, 0); goombaGroup.add(footR);
+            goombaGroup.position.set(x, y, z); scene.add(goombaGroup);
+            const axis = pWidth > pDepth ? 'x' : 'z'; const limit = (axis === 'x' ? pWidth : pDepth) / 2 - 0.6;
+            goombas.push({ mesh: goombaGroup, axis, startPos: axis === 'x' ? x : z, limit, speed: 0.03 + Math.random() * 0.03, dir: 1 });
+        }
+
+        function updateGoombas() {
+            for (let i = goombas.length - 1; i >= 0; i--) {
+                const g = goombas[i];
+                if (g.axis === 'x') { g.mesh.position.x += g.speed * g.dir; if (g.mesh.position.x > g.startPos + g.limit || g.mesh.position.x < g.startPos - g.limit) g.dir *= -1; } 
+                else { g.mesh.position.z += g.speed * g.dir; if (g.mesh.position.z > g.startPos + g.limit || g.mesh.position.z < g.startPos - g.limit) g.dir *= -1; }
+                const distH = Math.sqrt(Math.pow(player.position.x - g.mesh.position.x, 2) + Math.pow(player.position.z - g.mesh.position.z, 2));
+                if (distH < (1.0 * player.scale.x)) { 
+                    const playerBottom = player.position.y - (0.5 * player.scale.y);
+                    if (playerBottom > g.mesh.position.y && velocityY < 0) {
+                        scene.remove(g.mesh); goombas.splice(i, 1); velocityY = 0.25; score += 200; document.getElementById('score').innerText = score;
+                    } else if (Math.abs(player.position.y - g.mesh.position.y) < 0.8) {
+                        if (isBig) { isBig = false; player.scale.set(1, 1, 1); scene.remove(g.mesh); goombas.splice(i, 1); velocityY = 0.3; }
+                        else { handlePlayerDeath(); }
+                    }
+                }
+            }
+        }
+
+        function onMouseMove(e) {
+            if (isPaused || isGameOver) return;
+            if (document.pointerLockElement === renderer.domElement) {
+                targetRotationY -= e.movementX * gameConfig.sensitivity;
+                targetRotationX += e.movementY * gameConfig.sensitivity;
+                targetRotationX = Math.max(0.1, Math.min(Math.PI/2.2, targetRotationX));
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updateCamera() {
+            const distance = 8;
+            const camX = player.position.x - Math.sin(targetRotationY) * Math.cos(targetRotationX) * distance;
+            const camY = player.position.y + Math.sin(targetRotationX) * distance + 1.5;
+            const camZ = player.position.z - Math.cos(targetRotationY) * Math.cos(targetRotationX) * distance;
+            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.1);
+            camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+        }
+
+        function checkWallCollision(newX, newZ) {
+            const playerRadius = 0.4 * player.scale.x;
+            for (let p of platforms) {
+                const pTop = p.mesh.position.y + p.h/2; const pBottom = p.mesh.position.y - p.h/2;
+                if (player.position.y + (0.5 * player.scale.y) > pBottom && player.position.y - (0.5 * player.scale.y) < pTop) {
+                    const halfW = p.w / 2 + playerRadius; const halfD = p.d / 2 + playerRadius;
+                    if (Math.abs(newX - p.mesh.position.x) < halfW && Math.abs(newZ - p.mesh.position.z) < halfD) return true;
+                }
+            }
+            return false;
+        }
+
+        function checkVerticalCollisions() {
+            const playerHalfHeight = 0.5 * player.scale.y;
+            const playerBottom = player.position.y - playerHalfHeight;
+            const playerTop = player.position.y + playerHalfHeight;
+            platforms.forEach(p => {
+                const halfW = p.w / 2 + 0.4; const halfD = p.d / 2 + 0.4;
+                if (Math.abs(player.position.x - p.mesh.position.x) < halfW && Math.abs(player.position.z - p.mesh.position.z) < halfD) {
+                    const platformTop = p.mesh.position.y + p.h/2; const platformBottom = p.mesh.position.y - p.h/2;
+                    if (velocityY <= 0) { 
+                        if (playerBottom >= platformTop - 0.5 && playerBottom + velocityY <= platformTop + 0.1) { player.position.y = platformTop + playerHalfHeight; velocityY = 0; jumpCount = 0; currentPlatform = p; }
+                    } else if (velocityY > 0) {
+                        if (playerTop <= platformBottom + 0.5 && playerTop + velocityY >= platformBottom - 0.1) { player.position.y = platformBottom - playerHalfHeight - 0.01; velocityY = 0; }
+                    }
+                }
+            });
+        }
+
+        function updateCheckpoints() {
+            checkpoints.forEach(cp => {
+                if (!cp.active && player.position.distanceTo(cp.mesh.position) < 2.5) {
+                    cp.active = true;
+                    cp.flagMesh.material.color.setHex(0xFF0000);
+                    cp.flagMesh.material.emissive.setHex(0x550000);
+                    currentCheckpoint = { 
+                        x: cp.pos.x, 
+                        y: cp.pos.y, 
+                        z: cp.pos.z,
+                        rot: player.rotation.y 
+                    };
+                    const msg = document.getElementById('checkpoint-msg');
+                    msg.style.display = 'none';
+                    void msg.offsetWidth;
+                    msg.style.display = 'block';
+                }
+            });
+        }
+
+        function endGame(win) {
+            isGameOver = true; document.exitPointerLock(); document.getElementById('game-over').style.display = 'block';
+            const statusText = document.getElementById('status-text'); const endMsg = document.getElementById('end-msg');
+            if (win) { statusText.innerText = "GEWONNEN!"; statusText.style.color = "gold"; endMsg.innerText = "Je hebt de vlag bereikt!"; } 
+            else { statusText.innerText = "GAME OVER"; statusText.style.color = "#ff4444"; endMsg.innerText = "Helaas, al je levens zijn op."; }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (isPaused || isGameOver) return;
+
+            now = Date.now();
+            elapsed = now - then;
+
+            if (elapsed > fpsInterval) {
+                then = now - (elapsed % fpsInterval);
+
+                updateParticles(); 
+                updateProjectiles();
+                updateClouds();
+                updateCheckpoints();
+
+                for(let i=powerups.length-1; i>=0; i--) {
+                    const p = powerups[i]; const time = clock.getElapsedTime();
+                    p.mesh.rotation.y += 0.03; p.mesh.position.y = p.mesh.userData.startY + Math.sin(time * 2 + p.mesh.userData.floatOffset) * 0.2;
+                    if (player.position.distanceTo(p.mesh.position) < 1.5) { collectPowerup(p.mesh.userData.type); scene.remove(p.mesh); powerups.splice(i, 1); }
+                }
+
+                let inputX = 0; let inputZ = 0;
+                if (keys['KeyW']) inputZ += 1; if (keys['KeyS']) inputZ -= 1; if (keys['KeyA']) inputX += 1; if (keys['KeyD']) inputX -= 1;
+
+                if (inputX !== 0 || inputZ !== 0) {
+                    const length = Math.sqrt(inputX * inputX + inputZ * inputZ);
+                    const dirX = (inputX / length); const dirZ = (inputZ / length);
+                    const targetDirX = (Math.cos(targetRotationY) * dirX + Math.sin(targetRotationY) * dirZ);
+                    const targetDirZ = (-Math.sin(targetRotationY) * dirX + Math.cos(targetRotationY) * dirZ);
+                    velocityX += targetDirX * acceleration; velocityZ += targetDirZ * acceleration;
+                    player.rotation.y = targetRotationY + Math.atan2(dirX, dirZ);
+                }
+
+                const currentSpeed = Math.sqrt(velocityX*velocityX + velocityZ*velocityZ);
+                if (currentSpeed > maxSpeed) { const ratio = maxSpeed / currentSpeed; velocityX *= ratio; velocityZ *= ratio; }
+
+                velocityX *= friction; velocityZ *= friction;
+                const nextX = player.position.x + velocityX; const nextZ = player.position.z + velocityZ;
+                if (!checkWallCollision(nextX, player.position.z)) player.position.x = nextX; else velocityX = 0; 
+                if (!checkWallCollision(player.position.x, nextZ)) player.position.z = nextZ; else velocityZ = 0; 
+
+                velocityY += gravity; player.position.y += velocityY;
+
+                checkVerticalCollisions();
+                updateGoombas();
+                updateThwomps();
+                updateBulletBills();
+                movingPlatforms.forEach(p => {
+                    const time = clock.getElapsedTime() + p.timeOffset;
+                    const offset = Math.sin(time * 2) * p.range; 
+                    const oldX = p.mesh.position.x; const oldY = p.mesh.position.y;
+                    if (p.moveType === 'horizontal') p.mesh.position.x = p.startPosX + offset;
+                    else if (p.moveType === 'vertical') p.mesh.position.y = p.startPosY + offset;
+                    if (currentPlatform === p) { player.position.x += (p.mesh.position.x - oldX); player.position.y += (p.mesh.position.y - oldY); }
+                });
+                
+                if (flag) {
+                    const distToFlag = player.position.distanceTo(flag.position);
+                    const heightDiff = Math.abs(player.position.y - flag.position.y);
+                    if (distToFlag < 2.5 && heightDiff < 3) endGame(true);
+                }
+
+                updateStars();
+                updateCamera();
+
+                if (player.position.y < -30) handlePlayerDeath(); 
+
+                renderer.render(scene, camera);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
