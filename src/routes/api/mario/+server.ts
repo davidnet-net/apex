@@ -57,4 +57,6 @@ export const POST: RequestHandler = async ({ request }) => {
         gameState: globalState,
         players: Array.from(players.values()).filter(p => p.id !== id)
     });
+
+    //yap
 };
