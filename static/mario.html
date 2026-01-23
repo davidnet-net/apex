@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Mario Multiplayer - Full Legacy Edition</title>
+    <title>3D Mario Multiplayer - Full Uncompressed</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #5c94fc; font-family: 'Segoe UI', sans-serif; user-select: none; }
         
-        /* UI Styling */
+        /* HUD & UI */
         #stats-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; z-index: 10; pointer-events: none; }
         .stat-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); padding: 8px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-        .heart-icon { color: #ff4444; } .star-icon { color: #ffd700; } .score-icon { color: #4caf50; }
         
         #settings-btn { position: absolute; top: 20px; left: 20px; cursor: pointer; font-size: 24px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; z-index: 11; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
         #settings-btn:hover { transform: scale(1.1); background: rgba(0,0,0,0.8); }
@@ -66,7 +65,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // --- MULTIPLAYER MANAGER ---
+        // ==========================================
+        // 1. MULTIPLAYER SYSTEM
+        // ==========================================
         class MultiplayerManager {
             constructor(scene) {
                 this.scene = scene;
@@ -75,20 +76,25 @@
                 this.ghosts = new Map();
                 this.currentSeed = null;
                 this.syncInterval = 0;
+                this.connected = false;
             }
 
+            // Seeded Random (LCG) - Zorgt dat iedereen hetzelfde level ziet
             seededRandom(seed) {
                 let s = seed % 2147483647;
+                if (s <= 0) s += 2147483646;
                 return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
             }
 
             async sync() {
                 this.syncInterval++;
+                // Sync elke ~60ms (4 frames bij 60fps) om netwerk te sparen
                 if (this.syncInterval % 4 !== 0) return; 
 
                 try {
                     const res = await fetch('/api/mario', {
                         method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             action: 'update',
                             id: this.id,
@@ -99,33 +105,51 @@
                             }
                         })
                     });
-                    const data = await res.json();
                     
+                    if (!res.ok) throw new Error("Server error");
+                    const data = await res.json();
+                    this.connected = true;
+                    
+                    // Update Globale Stats
                     lives = data.gameState.sharedLives;
                     score = data.gameState.sharedScore;
                     starsCollected = data.gameState.sharedStars;
+                    
                     document.getElementById('lives').innerText = lives;
                     document.getElementById('score').innerText = score;
                     document.getElementById('stars').innerText = starsCollected;
 
+                    // Level Generatie Sync
                     if (this.currentSeed !== data.gameState.levelSeed) {
+                        console.log("Nieuw level seed ontvangen:", data.gameState.levelSeed);
                         this.currentSeed = data.gameState.levelSeed;
                         generateLevel(); 
-                        if (isGameOver) restartGame(false); 
+                        if (isGameOver && lives > 0) restartGame(false); 
                     }
 
+                    // Game Over Sync
                     if (lives <= 0 && !isGameOver) endGame(false);
+                    
+                    // Update andere spelers (Ghosts)
                     this.updateGhosts(data.players);
+
                 } catch(e) {
-                    if(this.currentSeed === null) { this.currentSeed = 12345; generateLevel(); }
+                    console.warn("Verbinding verbroken, probeer opnieuw...", e);
+                    // Fallback voor development als server niet draait: genereer lokaal level
+                    if(this.currentSeed === null) { 
+                        this.currentSeed = 12345; 
+                        generateLevel(); 
+                    }
                 }
             }
 
             updateGhosts(players) {
                 const activeIds = new Set(players.map(p => p.id));
+                // Verwijder disconnected spelers
                 for(let [id, mesh] of this.ghosts.entries()) {
                     if(!activeIds.has(id)) { this.scene.remove(mesh); this.ghosts.delete(id); }
                 }
+                // Update posities
                 players.forEach(p => {
                     let g = this.ghosts.get(p.id);
                     if(!g) {
@@ -169,11 +193,19 @@
             }
 
             async report(action, payload = {}) {
-                await fetch('/api/mario', { method: 'POST', body: JSON.stringify({ action, id: this.id, payload }) });
+                try {
+                    await fetch('/api/mario', { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ action, id: this.id, payload }) 
+                    });
+                } catch(e) {}
             }
         }
 
-        // --- GAME ENGINE ---
+        // ==========================================
+        // 2. GLOBAL VARIABLES
+        // ==========================================
         let gameConfig = { levelLength: 8, sensitivity: 0.002, maxFPS: 60 };
         let scene, camera, renderer, player, clock, mp;
         let platforms = [], movingPlatforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], particles = [], powerups = [], projectiles = [], clouds = [], checkpoints = [];
@@ -189,6 +221,9 @@
         
         let fpsInterval, now, then, elapsed, frameCount = 0, lastTimeFPS = 0;
 
+        // ==========================================
+        // 3. TEXTURE GENERATION
+        // ==========================================
         function generateTextures() {
             const getCtx = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return {c, ctx: c.getContext('2d')}; };
             let t = getCtx(256, 256); t.ctx.fillStyle = '#2e7d32'; t.ctx.fillRect(0,0,256,256);
@@ -211,6 +246,9 @@
             textures['gold'] = new THREE.CanvasTexture(t.c);
         }
 
+        // ==========================================
+        // 4. INITIALIZATION
+        // ==========================================
         function init() {
             generateTextures();
             scene = new THREE.Scene(); scene.background = new THREE.Color(0x6fa8ff); scene.fog = new THREE.Fog(0x6fa8ff, 20, 160);
@@ -225,8 +263,7 @@
             dir.shadow.mapSize.width = 2048; dir.shadow.mapSize.height = 2048; scene.add(dir);
 
             createPlayer();
-            // Veiligheidsplatform voor de start
-            createPlatform(0, -2, 0, 12, 1, 12, 'grass');
+            createPlatform(0, -2, 0, 12, 1, 12, 'grass'); // Safe start
             createClouds();
 
             window.addEventListener('keydown', e => { 
@@ -251,7 +288,6 @@
             animate();
         }
 
-        // --- CLOUDS ---
         function createClouds() {
             clouds.forEach(c => scene.remove(c.mesh)); clouds = [];
             const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -270,8 +306,10 @@
             }
         }
 
+        // ==========================================
+        // 5. LEVEL GENERATOR
+        // ==========================================
         function generateLevel() {
-            // Cleanup
             platforms.forEach(p => scene.remove(p.mesh)); platforms = []; movingPlatforms = [];
             stars.forEach(s => scene.remove(s)); stars = []; totalStarsInLevel = 0;
             goombas.forEach(g => scene.remove(g.mesh)); goombas = [];
@@ -281,7 +319,7 @@
             checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
             if(flag) scene.remove(flag);
 
-            // Server-Synced Seed!
+            // Server-Synced Seed
             const rng = mp.seededRandom(mp.currentSeed || 12345);
 
             createPlatform(0, 0, 0, 8, 1, 8, 'grass');
@@ -298,7 +336,7 @@
             for(let s=0; s<gameConfig.levelLength; s++) {
                 const seg = bTypes[Math.floor(rng() * bTypes.length)];
                 
-                // Paden
+                // Segments
                 for(let i=0; i<seg.steps; i++) {
                     ang += (rng()-0.5)*0.8;
                     let d = 5 + rng()*2;
@@ -319,7 +357,7 @@
                     cx = nextX; cy = nextY; cz = nextZ;
                 }
                 
-                // Plaats gebouw
+                // Buildings
                 cx += Math.sin(ang)*8; cz += Math.cos(ang)*8;
                 let buildRes;
                 switch(seg.type) {
@@ -342,106 +380,76 @@
                 createCheckpoint(buildRes.x, buildRes.y, buildRes.z);
                 cx = buildRes.x; cy = buildRes.y; cz = buildRes.z;
             }
-            
-            // Finish Flag
             cx += 10;
             createPlatform(cx, cy, cz, 6, 1, 6, 'gold');
             createFlag(cx, cy+0.5, cz);
             document.getElementById('total-stars').innerText = totalStarsInLevel;
         }
 
-        // --- UITGEBREIDE GEBOUW FUNCTIES (Geometry & Logic) ---
+        // ==========================================
+        // 6. BUILDING DEFINITIONS
+        // ==========================================
         function createSkyFortress(x, y, z) {
-            createPlatform(x, y, z, 20, 2, 20, 'stone');
-            createPlatform(x, y+5, z, 10, 8, 10, 'brick');
-            createPlatform(x+8, y+4, z+8, 4, 10, 4, 'stone');
-            createPlatform(x-8, y+4, z-8, 4, 10, 4, 'stone');
-            createThwomp(x, y+15, z);
-            return { x, y: y+9, z: z+12 };
+            createPlatform(x, y, z, 20, 2, 20, 'stone'); createPlatform(x, y+5, z, 10, 8, 10, 'brick');
+            createPlatform(x+8, y+4, z+8, 4, 10, 4, 'stone'); createPlatform(x-8, y+4, z-8, 4, 10, 4, 'stone');
+            createThwomp(x, y+15, z); return { x, y: y+9, z: z+12 };
         }
         function createClockTower(x, y, z) {
-            createPlatform(x, y, z, 8, 1, 8, 'brick');
-            createPlatform(x, y+10, z, 4, 20, 4, 'brick');
-            createPlatform(x, y+18, z+2.1, 2, 2, 0.2, 0xffffff); // Wijzerplaat
-            createBulletBill(x, y+2, z+5, Math.PI);
+            createPlatform(x, y, z, 8, 1, 8, 'brick'); createPlatform(x, y+10, z, 4, 20, 4, 'brick');
+            createPlatform(x, y+18, z+2.1, 2, 2, 0.2, 0xffffff); createBulletBill(x, y+2, z+5, Math.PI);
             return { x, y, z: z+6 };
         }
         function createTwinTowers(x, y, z) {
-            createPlatform(x-5, y+6, z, 4, 12, 4, 'stone');
-            createPlatform(x+5, y+6, z, 4, 12, 4, 'stone');
-            createPlatform(x, y+10, z, 8, 1, 3, 'wood'); // Brug
-            createGoomba(x, y+10.5, z, 8, 3);
+            createPlatform(x-5, y+6, z, 4, 12, 4, 'stone'); createPlatform(x+5, y+6, z, 4, 12, 4, 'stone');
+            createPlatform(x, y+10, z, 8, 1, 3, 'wood'); createGoomba(x, y+10.5, z, 8, 3);
             return { x, y: y+10, z };
         }
         function createColosseum(x, y, z) {
             createPlatform(x, y, z, 16, 1, 16, 'stone');
-            for(let i=0; i<8; i++) {
-                let a = (i/8)*Math.PI*2;
-                createPlatform(x+Math.cos(a)*7, y+3, z+Math.sin(a)*7, 2, 6, 2, 'brick'); // Pilaren
-            }
-            createThwomp(x, y+5, z);
-            return { x, y, z: z+9 };
+            for(let i=0; i<8; i++) { let a = (i/8)*Math.PI*2; createPlatform(x+Math.cos(a)*7, y+3, z+Math.sin(a)*7, 2, 6, 2, 'brick'); }
+            createThwomp(x, y+5, z); return { x, y, z: z+9 };
         }
         function createLighthouse(x, y, z) {
-            createPlatform(x, y, z, 6, 1, 6, 'stone');
-            createPlatform(x, y+10, z, 3, 20, 3, 0xff0000, 'cylinder');
-            createPlatform(x, y+20, z, 4, 1, 4, 'gold');
-            return { x, y, z: z+5 };
+            createPlatform(x, y, z, 6, 1, 6, 'stone'); createPlatform(x, y+10, z, 3, 20, 3, 0xff0000, 'cylinder');
+            createPlatform(x, y+20, z, 4, 1, 4, 'gold'); return { x, y, z: z+5 };
         }
         function createWindmill(x, y, z) {
-            createPlatform(x, y, z, 6, 1, 6, 'grass');
-            createPlatform(x, y+3, z, 3, 6, 3, 'wood');
-            createPlatform(x, y+4, z+1.6, 8, 0.5, 0.5, 0xffffff); // Wieken
-            createPlatform(x, y+4, z+1.6, 0.5, 8, 0.5, 0xffffff);
+            createPlatform(x, y, z, 6, 1, 6, 'grass'); createPlatform(x, y+3, z, 3, 6, 3, 'wood');
+            createPlatform(x, y+4, z+1.6, 8, 0.5, 0.5, 0xffffff); createPlatform(x, y+4, z+1.6, 0.5, 8, 0.5, 0xffffff);
             return { x, y, z: z+5 };
         }
         function createGreenhouse(x, y, z) {
-            createPlatform(x, y, z, 8, 1, 8, 'grass');
-            createPlatform(x, y+4, z, 7, 0.5, 7, 0x88ccff); // Glas dak
-            createPowerup(x, y+1, z, 'flower');
-            return { x, y, z: z+6 };
+            createPlatform(x, y, z, 8, 1, 8, 'grass'); createPlatform(x, y+4, z, 7, 0.5, 7, 0x88ccff);
+            createPowerup(x, y+1, z, 'flower'); return { x, y, z: z+6 };
         }
         function createWell(x, y, z) {
-            createPlatform(x, y, z, 5, 1, 5, 'stone');
-            createPlatform(x, y+1, z, 2, 1.5, 2, 0x000000, 'cylinder'); // Gat
-            createPlatform(x, y+4, z, 4, 0.5, 2, 'wood'); // Dakje
-            return { x, y, z: z+4 };
+            createPlatform(x, y, z, 5, 1, 5, 'stone'); createPlatform(x, y+1, z, 2, 1.5, 2, 0x000000, 'cylinder');
+            createPlatform(x, y+4, z, 4, 0.5, 2, 'wood'); return { x, y, z: z+4 };
         }
         function createShrine(x, y, z) {
-            createPlatform(x, y, z, 5, 1, 5, 'stone');
-            createPlatform(x, y+3, z-1.5, 4, 0.5, 1, 0x222222); // Torii poort achtig
-            addStar(x, y+1, z);
-            return { x, y, z: z+4 };
+            createPlatform(x, y, z, 5, 1, 5, 'stone'); createPlatform(x, y+3, z-1.5, 4, 0.5, 1, 0x222222);
+            addStar(x, y+1, z); return { x, y, z: z+4 };
         }
         function createGazebo(x, y, z) {
-            createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder');
-            createPlatform(x, y+3, z, 5, 0.5, 5, 0xaa5500, 'cylinder');
+            createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder'); createPlatform(x, y+3, z, 5, 0.5, 5, 0xaa5500, 'cylinder');
             return { x, y, z: z+4 };
         }
         function createFloatingRuins(x, y, z, rng) {
             for(let i=0; i<10; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone');
-            createThwomp(x, y+6, z);
-            return { x, y, z: z+10 };
+            createThwomp(x, y+6, z); return { x, y, z: z+10 };
         }
         function createSpiralStaircase(x, y, z) {
             createPlatform(x, y+7, z, 2, 14, 2, 'brick', 'cylinder');
-            for(let i=0; i<12; i++) {
-                let a = (i/12)*Math.PI*2;
-                createPlatform(x+Math.cos(a)*6, y+i*1.2, z+Math.sin(a)*6, 3, 0.5, 3, 'wood');
-            }
+            for(let i=0; i<12; i++) { let a = (i/12)*Math.PI*2; createPlatform(x+Math.cos(a)*6, y+i*1.2, z+Math.sin(a)*6, 3, 0.5, 3, 'wood'); }
             return { x: x+6, y: y+14, z };
         }
         function createBuildingTower(x, y, z) {
-            createPlatform(x, y, z, 14, 1, 14, 'stone');
-            createPlatform(x, y+9, z, 2, 18, 2, 'stone');
+            createPlatform(x, y, z, 14, 1, 14, 'stone'); createPlatform(x, y+9, z, 2, 18, 2, 'stone');
             return { x: x-3.5, y: y+10, z: z+3.5 };
         }
         function createBuildingCastle(x, y, z) {
-            createPlatform(x, y, z, 10, 1, 16, 'stone');
-            createPlatform(x+5, y+2, z, 1, 4, 16, 'brick'); // Muur links
-            createPlatform(x-5, y+2, z, 1, 4, 16, 'brick'); // Muur rechts
-            createThwomp(x, y+5, z);
-            return { x, y, z: z+9 };
+            createPlatform(x, y, z, 10, 1, 16, 'stone'); createPlatform(x+5, y+2, z, 1, 4, 16, 'brick'); createPlatform(x-5, y+2, z, 1, 4, 16, 'brick');
+            createThwomp(x, y+5, z); return { x, y, z: z+9 };
         }
 
         // --- OBJECT CREATION HELPERS ---
@@ -535,7 +543,9 @@
             s.position.set(x,y,z); scene.add(s); stars.push(s);
         }
 
-        // --- TICK ---
+        // ==========================================
+        // 7. GAME LOOP (PHYSICS & LOGIC)
+        // ==========================================
         function animate() {
             requestAnimationFrame(animate);
             if(isPaused || isGameOver) return;
@@ -586,17 +596,24 @@
                     }
                 });
 
-                // Enemies
-                goombas.forEach((g,i) => {
+                // Enemies (Backwards loop safe for splicing)
+                for (let i = goombas.length - 1; i >= 0; i--) {
+                    let g = goombas[i];
                     g.mesh.position.x += g.speed * g.dir;
-                    if(Math.abs(g.mesh.position.x - g.startX) > g.limit) g.dir *= -1;
-                    if(player.position.distanceTo(g.mesh.position) < 1.3) {
-                        if(velocityY < 0 && player.position.y > g.mesh.position.y+0.5) {
-                            scene.remove(g.mesh); goombas.splice(i,1); velocityY=0.25; createParticles(g.mesh.position, 0x8B4513, 5);
-                            score+=100; mp.report('score', {amount: 100});
-                        } else handleDeath();
+                    if (Math.abs(g.mesh.position.x - g.startX) > g.limit) g.dir *= -1;
+
+                    if (player.position.distanceTo(g.mesh.position) < 1.4) {
+                        // Kill condition: falling and above enemy
+                        if (velocityY <= 0.05 && player.position.y > g.mesh.position.y + 0.2) {
+                            scene.remove(g.mesh); goombas.splice(i, 1);
+                            velocityY = 0.35; // Bounce
+                            createParticles(g.mesh.position, 0x8B4513, 8);
+                            score += 100; mp.report('score', {amount: 100});
+                        } else {
+                            handleDeath();
+                        }
                     }
-                });
+                }
 
                 thwomps.forEach(t => {
                     const d = player.position.distanceTo(t.mesh.position);
@@ -619,15 +636,23 @@
                 // Projectiles & Particles
                 for(let i=bullets.length-1; i>=0; i--) {
                     const b = bullets[i]; b.position.x += b.userData.vx; b.position.z += b.userData.vz;
-                    if(b.position.distanceTo(player.position) < 1) handleDeath();
+                    if(b.position.distanceTo(player.position) < 1.2) handleDeath();
                     b.userData.life--; if(b.userData.life<=0) { scene.remove(b); bullets.splice(i,1); }
                 }
                 for(let i=projectiles.length-1; i>=0; i--) {
                     const p = projectiles[i]; p.position.x+=p.userData.vx; p.position.z+=p.userData.vz;
-                    p.userData.life--; if(p.userData.life<=0){scene.remove(p); projectiles.splice(i,1);}
-                    else {
-                        goombas.forEach((g,gi) => { if(p.position.distanceTo(g.mesh.position)<1.5) { scene.remove(g.mesh); goombas.splice(gi,1); scene.remove(p); projectiles.splice(i,1); createParticles(g.mesh.position, 0xff0000, 5); } });
+                    p.userData.life--; 
+                    let hit = false;
+                    for (let gi = goombas.length - 1; gi >= 0; gi--) {
+                        let g = goombas[gi];
+                        if (p.position.distanceTo(g.mesh.position) < 2.0) {
+                            scene.remove(g.mesh); goombas.splice(gi, 1);
+                            createParticles(g.mesh.position, 0xff0000, 5);
+                            score += 100; mp.report('score', {amount: 100});
+                            hit = true; break;
+                        }
                     }
+                    if(hit || p.userData.life<=0){scene.remove(p); projectiles.splice(i,1);}
                 }
                 for(let i=particles.length-1; i>=0; i--) {
                     const p = particles[i]; p.position.x+=p.userData.vx; p.position.y+=p.userData.vy; p.position.z+=p.userData.vz; p.userData.life-=0.02;
@@ -669,6 +694,7 @@
             }
         }
 
+        // --- UTILS ---
         function openSettings() { isPaused=true; document.getElementById('settings-menu').style.display='block'; document.exitPointerLock(); }
         function closeSettings() { isPaused=false; document.getElementById('settings-menu').style.display='none'; renderer.domElement.requestPointerLock(); }
         function updateSettingsUI() { document.getElementById('val-len').innerText = document.getElementById('opt-length').value; gameConfig.levelLength = parseInt(document.getElementById('opt-length').value); gameConfig.sensitivity = document.getElementById('opt-sens').value * 0.0005; mp.name = document.getElementById('opt-name').value || "Mario"; }
