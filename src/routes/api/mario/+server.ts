@@ -21,12 +21,12 @@ interface PlayerData {
     lastSeen: number;
 }
 
-// In-memory state
+// In-memory state voor multiplayer
 let globalState: GameState = {
     sharedLives: 3,
     sharedScore: 0,
     sharedStars: 0,
-    levelSeed: Math.floor(Math.random() * 1000000),
+    levelSeed: Math.floor(Math.random() * 999999),
     isLevelComplete: false
 };
 
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const { action, id, payload } = await request.json();
     const now = Date.now();
 
-    // Cleanup inactive
+    // Opschonen van inactieve spelers (> 5 seconden)
     for (const [pid, pdata] of players.entries()) {
         if (now - pdata.lastSeen > 5000) players.delete(pid);
     }
@@ -46,12 +46,14 @@ export const POST: RequestHandler = async ({ request }) => {
     } else if (action === 'death') {
         globalState.sharedLives = Math.max(0, globalState.sharedLives - 1);
     } else if (action === 'score') {
-        globalState.sharedScore += payload.amount;
+        globalState.sharedScore += (payload.amount || 0);
         if (payload.isStar) globalState.sharedStars += 1;
     } else if (action === 'finish') {
         if (!globalState.isLevelComplete) {
             globalState.isLevelComplete = true;
-            globalState.levelSeed = Math.floor(Math.random() * 1000000);
+            // Genereer een nieuw zaadje voor het volgende gedeelde level
+            globalState.levelSeed = Math.floor(Math.random() * 999999);
+            // Reset status na een paar seconden zodat clients kunnen herladen
             setTimeout(() => { globalState.isLevelComplete = false; }, 3000);
         }
     }
