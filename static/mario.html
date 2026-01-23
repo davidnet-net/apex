@@ -3,22 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Mario Multiplayer - Full Prod Ready</title>
+    <title>3D Mario Multiplayer - Ultimate Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #5c94fc; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        
+        /* HUD */
         #stats-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; z-index: 10; pointer-events: none; }
-        .stat-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); padding: 8px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); }
-        #settings-btn { position: absolute; top: 20px; left: 20px; cursor: pointer; font-size: 24px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; z-index: 11; border: 1px solid rgba(255,255,255,0.1); }
-        #settings-menu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 40, 0.95); color: white; padding: 30px; border-radius: 15px; border: 2px solid #5c94fc; z-index: 100; width: 300px; text-align: center; }
+        .stat-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); padding: 8px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .heart-icon { color: #ff4444; } .star-icon { color: #ffd700; } .score-icon { color: #4caf50; }
+        
+        /* Settings */
+        #settings-btn { position: absolute; top: 20px; left: 20px; cursor: pointer; font-size: 24px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; z-index: 11; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        #settings-btn:hover { transform: scale(1.1); background: rgba(0,0,0,0.8); }
+        #settings-menu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 40, 0.95); color: white; padding: 30px; border-radius: 15px; border: 2px solid #5c94fc; z-index: 100; width: 300px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
         .setting-row { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #88ccff; }
         input[type=text], input[type=range] { width: 100%; box-sizing: border-box; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 20px; text-align: center; display: none; border: 4px solid gold; z-index: 100; }
-        button.menu-btn { background: linear-gradient(to bottom, #f8b800, #d49000); border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 20px; color: #333; }
+        
+        /* Overlays */
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 20px; text-align: center; display: none; border: 4px solid gold; z-index: 100; box-shadow: 0 0 50px gold; }
+        button.menu-btn { background: linear-gradient(to bottom, #f8b800, #d49000); border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 20px; color: #333; box-shadow: 0 4px 0 #b07000; }
+        button.menu-btn:active { transform: translateY(4px); box-shadow: none; }
+        #instructions { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 25px; border-radius: 30px; font-size: 14px; pointer-events: none; }
+        
+        /* Popups */
         #powerup-msg, #checkpoint-msg { display: none; position: absolute; left: 50%; transform: translate(-50%, -50%); font-weight: bold; text-shadow: 2px 2px 4px #000; z-index: 15; pointer-events: none; }
         #powerup-msg { color: #ffff00; font-size: 30px; top: 20%; animation: popUp 1s forwards; }
         #checkpoint-msg { color: #00ff00; font-size: 24px; top: 30%; animation: fadeUp 2s forwards; }
-        @keyframes popUp { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
-        @keyframes fadeUp { 0% { transform: translate(-50%, 0); opacity: 0; } 100% { transform: translate(-50%, -50px); opacity: 0; } }
+        @keyframes popUp { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
+        @keyframes fadeUp { 0% { opacity: 0; transform: translate(-50%, 0); } 20% { opacity: 1; transform: translate(-50%, -20px); } 100% { opacity: 0; transform: translate(-50%, -50px); } }
     </style>
 </head>
 <body>
@@ -45,12 +58,17 @@
             <label>Level Lengte <span id="val-len" style="float:right">8</span></label>
             <input type="range" id="opt-length" min="4" max="20" value="8" oninput="updateSettingsUI()">
         </div>
+        <div class="setting-row">
+            <label>Gevoeligheid</label>
+            <input type="range" id="opt-sens" min="1" max="10" value="4" oninput="updateSettingsUI()">
+        </div>
         <button class="menu-btn" onclick="closeSettings()">Opslaan & Sluiten</button>
     </div>
 
     <div id="game-over">
         <h1 id="status-text">GAME OVER</h1>
-        <button class="menu-btn" onclick="restartGame(true)">Nieuw Spel Starten</button>
+        <p id="end-msg"></p>
+        <button class="menu-btn" onclick="restartGame(true)">Nieuw Spel Starten (Iedereen)</button>
     </div>
 
     <div id="instructions"><b>WASD</b> lopen | <b>Spatie</b> springen | <b>F</b> vuurbal | <b>Muis</b> kijken</div>
@@ -59,6 +77,7 @@
 
     <script>
         // --- MULTIPLAYER MANAGER ---
+        // Beheert de verbinding, de seed sync, en de andere spelers
         class MultiplayerManager {
             constructor(scene) {
                 this.scene = scene;
@@ -66,73 +85,113 @@
                 this.name = "Mario";
                 this.ghosts = new Map();
                 this.currentSeed = null;
+                this.syncInterval = 0;
             }
 
+            // Seeded Random Generator (Linear Congruential Generator)
+            // Zorgt ervoor dat met dezelfde seed iedereen exact hetzelfde level genereert
             seededRandom(seed) {
-                let s = seed;
+                let s = seed % 2147483647;
                 return () => {
-                    s = (s * 9301 + 49297) % 233280;
-                    return s / 233280;
+                    s = (s * 16807) % 2147483647;
+                    return (s - 1) / 2147483646;
                 };
             }
 
             async sync() {
+                this.syncInterval++;
+                if (this.syncInterval % 4 !== 0) return; // Sync elke ~60ms
+
                 try {
                     const res = await fetch('/api/mario', {
                         method: 'POST',
                         body: JSON.stringify({
                             action: 'update',
                             id: this.id,
-                            payload: { name: this.name, x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y, isBig, hasFirePower }
+                            payload: {
+                                name: this.name,
+                                x: player.position.x, y: player.position.y, z: player.position.z,
+                                rot: player.rotation.y, isBig, hasFirePower
+                            }
                         })
                     });
                     const data = await res.json();
                     
+                    // Update Globale Stats
                     lives = data.gameState.sharedLives;
                     score = data.gameState.sharedScore;
+                    starsCollected = data.gameState.sharedStars;
                     document.getElementById('lives').innerText = lives;
                     document.getElementById('score').innerText = score;
+                    document.getElementById('stars').innerText = starsCollected;
 
+                    // Level Sync Detectie
                     if (this.currentSeed !== data.gameState.levelSeed) {
+                        console.log("Nieuwe seed ontvangen:", data.gameState.levelSeed);
                         this.currentSeed = data.gameState.levelSeed;
-                        generateLevel(); 
-                        if (isGameOver) restartGame(false); 
+                        generateLevel(); // Herbouw de wereld
+                        if (isGameOver) restartGame(false); // Als we game over waren, respawn
                     }
 
                     if (lives <= 0 && !isGameOver) endGame(false);
                     this.updateGhosts(data.players);
-                } catch(e) {}
+                } catch(e) {
+                    // Fallback voor offline dev
+                    if(this.currentSeed === null) { this.currentSeed = 12345; generateLevel(); }
+                }
             }
 
             updateGhosts(players) {
-                const ids = new Set(players.map(p => p.id));
+                const activeIds = new Set(players.map(p => p.id));
+                // Verwijder spelers die weg zijn
                 for(let [id, mesh] of this.ghosts.entries()) {
-                    if(!ids.has(id)) { this.scene.remove(mesh); this.ghosts.delete(id); }
+                    if(!activeIds.has(id)) { this.scene.remove(mesh); this.ghosts.delete(id); }
                 }
+                // Update of maak nieuwe spelers
                 players.forEach(p => {
                     let g = this.ghosts.get(p.id);
                     if(!g) {
-                        g = new THREE.Group();
-                        g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x0088ff, transparent:true, opacity:0.7})));
-                        this.scene.add(g); this.ghosts.set(p.id, g);
-                        this.addNameTag(g, p.name);
+                        g = this.createGhostMesh();
+                        this.scene.add(g);
+                        this.ghosts.set(p.id, g);
                     }
-                    g.position.lerp(new THREE.Vector3(p.x, p.y, p.z), 0.2);
+                    // Interpolatie
+                    g.position.lerp(new THREE.Vector3(p.x, p.y, p.z), 0.3);
                     g.rotation.y = p.rot;
-                    g.scale.setScalar(p.isBig ? 1.5 : 1);
+                    const s = p.isBig ? 1.5 : 1;
+                    g.scale.set(s,s,s);
+                    this.updateNameTag(g, p.name);
                 });
             }
 
-            addNameTag(group, name) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 256; canvas.height = 64;
-                ctx.fillStyle = 'white'; ctx.font = '40px Arial'; ctx.textAlign = 'center';
-                ctx.fillText(name, 128, 48);
-                const tex = new THREE.CanvasTexture(canvas);
-                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: tex}));
-                sprite.position.y = 1.5; sprite.scale.set(2, 0.5, 1);
-                group.add(sprite);
+            createGhostMesh() {
+                const group = new THREE.Group();
+                // Blauwe "Mario" voor andere spelers
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x0088ff}));
+                body.castShadow = true;
+                group.add(body);
+                const hat = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x0044aa}));
+                hat.position.set(0, 0.4, 0.2);
+                group.add(hat);
+                return group;
+            }
+
+            updateNameTag(group, name) {
+                let tag = group.getObjectByName('nametag');
+                if (!tag || tag.userData.name !== name) {
+                    if (tag) group.remove(tag);
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 256; canvas.height = 64;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
+                    ctx.font = 'bold 36px Arial'; ctx.fillStyle = 'white'; ctx.textAlign = 'center';
+                    ctx.fillText(name, 128, 45);
+                    const tex = new THREE.CanvasTexture(canvas);
+                    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: tex, transparent: true}));
+                    sprite.position.y = 1.6; sprite.scale.set(2, 0.5, 1);
+                    sprite.name = 'nametag'; sprite.userData.name = name;
+                    group.add(sprite);
+                }
             }
 
             async report(action, payload = {}) {
@@ -140,203 +199,510 @@
             }
         }
 
-        // --- GLOBALE VARIABELEN & ENGINE ---
+        // --- GAME ENGINE CONSTANTEN ---
         let gameConfig = { levelLength: 8, sensitivity: 0.002, maxFPS: 60 };
         let scene, camera, renderer, player, clock, mp;
-        let platforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], projectiles = [], powerups = [], checkpoints = [], particles = [];
+        let platforms = [], movingPlatforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], particles = [], powerups = [], projectiles = [], clouds = [], checkpoints = [];
         let flag = null;
         let isGameOver = false, isPaused = false, lives = 3, score = 0, starsCollected = 0, totalStarsInLevel = 0;
         let isBig = false, hasFirePower = false, isImmune = false;
-        let velocityX = 0, velocityY = 0, velocityZ = 0, jumpCount = 0;
+        let currentCheckpoint = { x: 0, y: 5, z: 0, rot: Math.PI };
+        
+        // Physics
+        const gravity = -0.015, acceleration = 0.025, friction = 0.85, maxSpeed = 0.35;
+        let velocityX = 0, velocityZ = 0, velocityY = 0, jumpCount = 0;
         let targetRotationY = Math.PI, targetRotationX = 0.4;
         const keys = {}, textures = {};
+        
+        // FPS limiters
+        let fpsInterval, now, then, elapsed, frameCount = 0, lastTimeFPS = 0;
 
+        // --- TEXTURE GENERATIE (CANVAS API) ---
         function generateTextures() {
             const getCtx = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return {c, ctx: c.getContext('2d')}; };
-            // Grass
+            
+            // Gras
             let t = getCtx(256, 256); t.ctx.fillStyle = '#2e7d32'; t.ctx.fillRect(0,0,256,256);
-            for(let i=0; i<2000; i++) { t.ctx.fillStyle = '#4caf50'; t.ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2); }
+            for(let i=0; i<3000; i++) { t.ctx.fillStyle = Math.random() > 0.5 ? '#4caf50' : '#1b5e20'; t.ctx.fillRect(Math.random()*256, Math.random()*256, 3, 3); }
             textures['grass'] = new THREE.CanvasTexture(t.c); textures['grass'].wrapS = textures['grass'].wrapT = THREE.RepeatWrapping;
-            // Stone
-            t = getCtx(256, 256); t.ctx.fillStyle = '#757575'; t.ctx.fillRect(0,0,256,256);
-            textures['stone'] = new THREE.CanvasTexture(t.c); textures['stone'].wrapS = textures['stone'].wrapT = THREE.RepeatWrapping;
-            // Brick
+
+            // Baksteen
             t = getCtx(256, 256); t.ctx.fillStyle = '#bf360c'; t.ctx.fillRect(0,0,256,256);
             for(let y=0; y<4; y++) for(let x=0; x<4; x++) { t.ctx.fillStyle = '#8d6e63'; t.ctx.fillRect(x*64+2, y*64+2, 60, 60); }
             textures['brick'] = new THREE.CanvasTexture(t.c); textures['brick'].wrapS = textures['brick'].wrapT = THREE.RepeatWrapping;
-            // Gold
-            t = getCtx(128, 128); t.ctx.fillStyle = '#ffd700'; t.ctx.fillRect(0,0,128,128);
+
+            // Steen
+            t = getCtx(256, 256); t.ctx.fillStyle = '#757575'; t.ctx.fillRect(0,0,256,256);
+            for(let i=0; i<500; i++) { t.ctx.fillStyle = Math.random() > 0.5 ? '#9e9e9e' : '#616161'; t.ctx.beginPath(); t.ctx.arc(Math.random()*256, Math.random()*256, Math.random()*5+2, 0, Math.PI*2); t.ctx.fill(); }
+            textures['stone'] = new THREE.CanvasTexture(t.c); textures['stone'].wrapS = textures['stone'].wrapT = THREE.RepeatWrapping;
+
+            // Hout
+            t = getCtx(256, 256); t.ctx.fillStyle = '#5d4037'; t.ctx.fillRect(0,0,256,256); t.ctx.fillStyle = '#4e342e';
+            for(let i=0; i<20; i++) t.ctx.fillRect(0, i*12.8, 256, 2);
+            textures['wood'] = new THREE.CanvasTexture(t.c); textures['wood'].wrapS = textures['wood'].wrapT = THREE.RepeatWrapping;
+
+            // Goud
+            t = getCtx(64, 64); t.ctx.fillStyle = '#ffd700'; t.ctx.fillRect(0,0,64,64); t.ctx.fillStyle = '#ffecb3'; t.ctx.fillRect(5,5,20,20);
             textures['gold'] = new THREE.CanvasTexture(t.c);
         }
 
-        // --- GEBOUWEN (Alle 14 types hersteld) ---
-        function createSkyFortress(x, y, z) { createPlatform(x, y, z, 20, 2, 20, 'stone'); createPlatform(x, y+5, z, 10, 8, 10, 'brick'); createThwomp(x, y+12, z); return {x, y: y+9, z: z+10}; }
-        function createClockTower(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'brick'); createPlatform(x, y+10, z, 4, 20, 4, 'brick'); createBulletBill(x, y+2, z+4, 0); return {x, y, z: z+6}; }
-        function createTwinTowers(x, y, z) { createPlatform(x-5, y+6, z, 4, 12, 4, 'stone'); createPlatform(x+5, y+6, z, 4, 12, 4, 'stone'); return {x, y: y+10, z}; }
-        function createColosseum(x, y, z) { createPlatform(x, y, z, 16, 1, 16, 'stone'); createThwomp(x, y+5, z); return {x, y, z: z+8}; }
-        function createLighthouse(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'stone'); createPlatform(x, y+10, z, 3, 20, 3, 0xff0000, 'cylinder'); return {x, y, z: z+5}; }
-        function createWindmill(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'grass'); return {x, y, z: z+5}; }
-        function createGreenhouse(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'grass'); return {x, y, z: z+6}; }
-        function createWell(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return {x, y, z: z+4}; }
-        function createShrine(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); addStar(x, y+1, z); return {x, y, z: z+4}; }
-        function createGazebo(x, y, z) { createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder'); return {x, y, z: z+4}; }
-        function createFloatingRuins(x, y, z, rng) { for(let i=0; i<8; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone'); return {x, y, z: z+8}; }
-        function createSpiralStaircase(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'stone'); return {x, y, z}; }
-        function createBuildingTower(x, y, z) { createPlatform(x, y, z, 14, 1, 14, 'stone'); return {x, y: y+10, z}; }
-        function createBuildingCastle(x, y, z) { createPlatform(x, y, z, 10, 1, 16, 'stone'); createThwomp(x, y+5, z); return {x, y, z: z+9}; }
-
-        function createPlatform(x, y, z, w, h, d, tex, shape='box') {
-            const geo = shape==='box' ? new THREE.BoxGeometry(w,h,d) : new THREE.CylinderGeometry(w/2,w/2,h,32);
-            const mat = new THREE.MeshStandardMaterial({map: textures[tex]||null, color: textures[tex]?0xffffff:tex});
-            const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.receiveShadow = mesh.castShadow = true;
-            scene.add(mesh); platforms.push({mesh, w, h, d});
-        }
-
-        function createThwomp(x, y, z) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2.5, 2), new THREE.MeshStandardMaterial({color: 0x777777}));
-            mesh.position.set(x, y, z); scene.add(mesh);
-            thwomps.push({mesh, homeY: y, state: 'IDLE', timer: 0, speed: 0});
-        }
-
-        function createBulletBill(x, y, z, angle) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({color: 0x111111}));
-            mesh.position.set(x,y,z); scene.add(mesh);
-            bulletBills.push({mesh, timer: 0, direction: angle});
-        }
-
-        function createCheckpoint(x, y, z) {
-            const g = new THREE.Group();
-            g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2), new THREE.MeshStandardMaterial({color:0x888888})));
-            const f = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.6,0.05), new THREE.MeshStandardMaterial({color:0x00ff00}));
-            f.position.set(0.4, 1.6, 0); g.add(f);
-            g.position.set(x,y,z); scene.add(g);
-            checkpoints.push({mesh: g, active: false, pos: {x, y:y+1, z}});
-        }
-
-        function generateLevel() {
-            const rng = mp.seededRandom(mp.currentSeed || 12345);
-            platforms.forEach(p => scene.remove(p.mesh)); platforms = [];
-            thwomps.forEach(t => scene.remove(t.mesh)); thwomps = [];
-            bulletBills.forEach(b => scene.remove(b.mesh)); bulletBills = [];
-            checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
-            stars.forEach(s => scene.remove(s)); stars = [];
-            if(flag) scene.remove(flag);
-
-            createPlatform(0, 0, 0, 8, 1, 8, 'grass');
-            let cx = 0, cy = 0, cz = 0, ang = -Math.PI;
-            const bTypes = ['castle', 'tower', 'ruins', 'lighthouse', 'windmill', 'skyFortress', 'clockTower', 'twinTowers', 'colosseum', 'well', 'shrine', 'gazebo'];
-
-            for(let s=0; s<gameConfig.levelLength; s++) {
-                for(let i=0; i<4; i++) {
-                    ang += (rng()-0.5)*0.8;
-                    let d = 5+rng()*2; // Garandeert begaanbaarheid
-                    cx += Math.sin(ang)*d; cz += Math.cos(ang)*d; cy += (rng()*2.5)-0.5;
-                    createPlatform(cx, cy, cz, 4, 1, 4, 'grass');
-                    if(rng()<0.2) addStar(cx, cy+1.5, cz);
-                }
-                const bType = bTypes[Math.floor(rng()*bTypes.length)];
-                let bx = cx+Math.sin(ang)*10, bz = cz+Math.cos(ang)*10;
-                let exit;
-                if(bType === 'ruins') exit = createFloatingRuins(bx, cy, bz, rng);
-                else if(bType === 'castle') exit = createBuildingCastle(bx, cy, bz);
-                else exit = createBuildingTower(bx, cy, bz);
-                
-                createCheckpoint(exit.x, exit.y, exit.z);
-                cx = exit.x; cy = exit.y; cz = exit.z;
-            }
-            createFlag(cx+10, cy+0.5, cz);
-        }
-
-        function createFlag(x, y, z) {
-            flag = new THREE.Group();
-            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshStandardMaterial({color:0x888888}));
-            p.position.y = 2; flag.add(p);
-            const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.1), new THREE.MeshStandardMaterial({color:0x00ff00}));
-            s.position.set(0.75, 3.5, 0); flag.add(s);
-            flag.position.set(x, y, z); scene.add(flag);
-        }
-
-        function addStar(x, y, z) {
-            const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({color:0xffd700, emissive:0xaa6600}));
-            s.position.set(x,y,z); scene.add(s); stars.push(s);
-        }
-
+        // --- INIT & SETUP ---
         function init() {
             generateTextures();
-            scene = new THREE.Scene(); scene.background = new THREE.Color(0x6fa8ff);
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x6fa8ff); scene.fog = new THREE.Fog(0x6fa8ff, 20, 160);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({antialias: true}); renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+            renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
             clock = new THREE.Clock(); mp = new MultiplayerManager(scene);
 
-            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-            const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(50,100,50); dl.castShadow = true; scene.add(dl);
+            // Belichting
+            const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xffffff, 1.2); dir.position.set(50,100,50); dir.castShadow = true;
+            dir.shadow.mapSize.width = 2048; dir.shadow.mapSize.height = 2048; scene.add(dir);
 
-            player = new THREE.Group();
-            player.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xff0000})));
-            player.position.set(0, 10, 0); scene.add(player);
+            createPlayer();
+            // Start platform om vallen bij init te voorkomen
+            createPlatform(0, -2, 0, 12, 1, 12, 'grass');
+            createClouds();
 
-            window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code==='Space'&&jumpCount<2){velocityY=0.4; jumpCount++;}});
+            // Inputs
+            window.addEventListener('keydown', e => { 
+                if(isGameOver) return; keys[e.code] = true; 
+                if(e.code === 'Space' && jumpCount < 2) { 
+                    velocityY = 0.42; jumpCount++; 
+                    if(jumpCount === 2) { velocityY = 0.5; createParticles(player.position, 0xffffff, 3); }
+                }
+                if(e.code === 'KeyF' && hasFirePower) shootFireball();
+            });
             window.addEventListener('keyup', e => keys[e.code] = false);
-            window.addEventListener('mousemove', e => { if(document.pointerLockElement===renderer.domElement){ targetRotationY -= e.movementX*gameConfig.sensitivity; targetRotationX = Math.max(0.1, Math.min(1.4, targetRotationX+e.movementY*gameConfig.sensitivity));}});
-            renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
+            window.addEventListener('mousemove', e => {
+                if(document.pointerLockElement === renderer.domElement && !isPaused) {
+                    targetRotationY -= e.movementX * gameConfig.sensitivity;
+                    targetRotationX = Math.max(0.1, Math.min(1.4, targetRotationX + e.movementY * gameConfig.sensitivity));
+                }
+            });
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+            renderer.domElement.addEventListener('click', () => { if(!isPaused && !isGameOver) renderer.domElement.requestPointerLock(); });
+
+            fpsInterval = 1000 / gameConfig.maxFPS; then = Date.now(); lastTimeFPS = performance.now();
             animate();
         }
 
-        function restartGame(full) { if(full) mp.report('restart'); player.position.set(0, 10, 0); velocityX=0; velocityY=0; velocityZ=0; isGameOver=false; document.getElementById('game-over').style.display='none'; }
-        function endGame(win) { isGameOver=true; document.exitPointerLock(); document.getElementById('game-over').style.display='block'; document.getElementById('status-text').innerText = win ? "GEWONNEN!" : "GAME OVER"; if(win) mp.report('finish'); }
+        // --- LEVEL GENERATION (DE MONOLIET) ---
+        function generateLevel() {
+            // Reset wereld
+            platforms.forEach(p => scene.remove(p.mesh)); platforms = []; movingPlatforms = [];
+            stars.forEach(s => scene.remove(s)); stars = []; totalStarsInLevel = 0;
+            goombas.forEach(g => scene.remove(g.mesh)); goombas = [];
+            thwomps.forEach(t => scene.remove(t.mesh)); thwomps = [];
+            bulletBills.forEach(b => scene.remove(b.mesh)); bulletBills = [];
+            powerups.forEach(p => scene.remove(p.mesh)); powerups = [];
+            checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
+            if(flag) scene.remove(flag);
 
-        function animate() {
-            requestAnimationFrame(animate);
-            if(isPaused) return;
-            mp.sync();
-            if(isGameOver) { renderer.render(scene, camera); return; }
+            // Gebruik de Server Seed!
+            const rng = mp.seededRandom(mp.currentSeed || 12345);
 
-            // Movement & Physics
-            let ix=0, iz=0;
-            if(keys['KeyW']) iz+=1; if(keys['KeyS']) iz-=1; if(keys['KeyA']) ix+=1; if(keys['KeyD']) ix-=1;
-            if(ix!==0||iz!==0){
-                const dx = (Math.cos(targetRotationY)*ix + Math.sin(targetRotationY)*iz);
-                const dz = (-Math.sin(targetRotationY)*ix + Math.cos(targetRotationY)*iz);
-                velocityX += dx*0.02; velocityZ += dz*0.02;
-                player.rotation.y = targetRotationY + Math.atan2(ix, iz);
-            }
-            velocityX*=0.85; velocityZ*=0.85;
-            player.position.x += velocityX; player.position.z += velocityZ;
-            velocityY -= 0.015; player.position.y += velocityY;
+            createPlatform(0, 0, 0, 8, 1, 8, 'grass');
+            let cx = 0, cy = 0, cz = 0, ang = -Math.PI;
 
-            // Collisions
-            platforms.forEach(p => {
-                const hw=p.w/2+0.4, hd=p.d/2+0.4;
-                if(Math.abs(player.position.x-p.mesh.position.x)<hw && Math.abs(player.position.z-p.mesh.position.z)<hd){
-                    const top = p.mesh.position.y+p.h/2;
-                    if(velocityY<=0 && player.position.y-0.5>=top-0.5 && player.position.y-0.5+velocityY<=top+0.1){ player.position.y=top+0.5; velocityY=0; jumpCount=0; }
+            // Alle 14 gebouwtypes uit de originele versie
+            const bTypes = [
+                { type: 'tower', steps: 5 }, { type: 'spiral', steps: 4 }, { type: 'ruins', steps: 6 },
+                { type: 'castle', steps: 5 }, { type: 'skyFortress', steps: 8 }, { type: 'clockTower', steps: 5 },
+                { type: 'twinTowers', steps: 6 }, { type: 'colosseum', steps: 6 }, { type: 'lighthouse', steps: 4 },
+                { type: 'windmill', steps: 4 }, { type: 'greenhouse', steps: 4 }, { type: 'well', steps: 3 },
+                { type: 'shrine', steps: 3 }, { type: 'gazebo', steps: 3 }
+            ];
+
+            for(let s=0; s<gameConfig.levelLength; s++) {
+                const seg = bTypes[Math.floor(rng() * bTypes.length)];
+                
+                // Paden tussen gebouwen genereren
+                for(let i=0; i<seg.steps; i++) {
+                    ang += (rng()-0.5)*0.8;
+                    let d = 5 + rng()*2; // Veilige springafstand
+                    let nextX = cx + Math.sin(ang)*d;
+                    let nextZ = cz + Math.cos(ang)*d;
+                    let nextY = cy + (rng()*2.5)-0.5;
+                    
+                    if(nextY < -5) nextY = cy + 2; // Voorkom te diep vallen
+
+                    if(rng() < 0.2) {
+                        createMovingPlatform(nextX, nextY, nextZ, 4, 1, 4, rng()>0.5?0x0088ff:0x9932cc, rng()>0.5?'h':'v', rng);
+                    } else {
+                        createPlatform(nextX, nextY, nextZ, 4, 1, 4, rng()>0.7?'wood':'grass');
+                        if(rng() < 0.1) createPowerup(nextX, nextY+1, nextZ, rng()>0.5?'mushroom':'flower');
+                        else if(rng() < 0.25) addStar(nextX, nextY+1.5, nextZ);
+                        if(rng() < 0.2) createGoomba(nextX, nextY+0.5, nextZ, 4, 4);
+                    }
+                    cx = nextX; cy = nextY; cz = nextZ;
                 }
-            });
 
-            // Enemy AI
-            thwomps.forEach(t => {
-                const d = player.position.distanceTo(t.mesh.position);
-                if(t.state==='IDLE'&&d<5) t.state='FALLING';
-                if(t.state==='FALLING'){ t.speed+=0.05; t.mesh.position.y-=t.speed; if(t.mesh.position.y<t.homeY-6){t.state='WAITING'; t.speed=0;}}
-                if(t.state==='WAITING'){ t.timer++; if(t.timer>60){t.state='RISING'; t.timer=0;}}
-                if(t.state==='RISING'){ t.mesh.position.y+=0.05; if(t.mesh.position.y>=t.homeY) t.state='IDLE'; }
-                if(d<1.5) { mp.report('death'); restartGame(false); }
-            });
+                // Gebouwen plaatsen
+                cx += Math.sin(ang)*8; cz += Math.cos(ang)*8;
+                let buildRes;
+                switch(seg.type) {
+                    case 'tower': buildRes = createBuildingTower(cx, cy, cz); break;
+                    case 'spiral': buildRes = createSpiralStaircase(cx, cy, cz); break;
+                    case 'ruins': buildRes = createFloatingRuins(cx, cy, cz, rng); break;
+                    case 'castle': buildRes = createBuildingCastle(cx, cy, cz); break;
+                    case 'skyFortress': buildRes = createSkyFortress(cx, cy, cz); break;
+                    case 'clockTower': buildRes = createClockTower(cx, cy, cz); break;
+                    case 'twinTowers': buildRes = createTwinTowers(cx, cy, cz); break;
+                    case 'colosseum': buildRes = createColosseum(cx, cy, cz); break;
+                    case 'lighthouse': buildRes = createLighthouse(cx, cy, cz); break;
+                    case 'windmill': buildRes = createWindmill(cx, cy, cz); break;
+                    case 'greenhouse': buildRes = createGreenhouse(cx, cy, cz); break;
+                    case 'well': buildRes = createWell(cx, cy, cz); break;
+                    case 'shrine': buildRes = createShrine(cx, cy, cz); break;
+                    case 'gazebo': buildRes = createGazebo(cx, cy, cz); break;
+                    default: buildRes = {x: cx, y, z: cz};
+                }
+                
+                // Checkpoint bij elk gebouw
+                createCheckpoint(buildRes.x, buildRes.y, buildRes.z);
+                cx = buildRes.x; cy = buildRes.y; cz = buildRes.z;
+            }
 
-            if(flag && player.position.distanceTo(flag.position) < 2) endGame(true);
-            if(player.position.y < -30) { mp.report('death'); restartGame(false); }
-
-            // Camera
-            const d = 10;
-            camera.position.lerp(new THREE.Vector3(player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*d, player.position.y + Math.sin(targetRotationX)*d + 2, player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*d), 0.1);
-            camera.lookAt(player.position.x, player.position.y+1, player.position.z);
-            renderer.render(scene, camera);
+            // Finish
+            cx += 10;
+            createPlatform(cx, cy, cz, 6, 1, 6, 'gold');
+            createFlag(cx, cy+0.5, cz);
+            document.getElementById('total-stars').innerText = totalStarsInLevel;
         }
 
+        // --- UITGEBREIDE GEBOUW FUNCTIES (Alle 14) ---
+        function createSkyFortress(x, y, z) {
+            createPlatform(x, y, z, 20, 2, 20, 'stone');
+            createPlatform(x, y+5, z, 10, 8, 10, 'brick');
+            createPlatform(x+8, y+4, z+8, 4, 10, 4, 'stone');
+            createPlatform(x-8, y+4, z-8, 4, 10, 4, 'stone');
+            createThwomp(x, y+15, z);
+            return { x, y: y+9, z: z+12 };
+        }
+        function createClockTower(x, y, z) {
+            createPlatform(x, y, z, 8, 1, 8, 'brick');
+            createPlatform(x, y+10, z, 4, 20, 4, 'brick');
+            createPlatform(x, y+18, z+2.1, 2, 2, 0.2, 0xffffff);
+            createBulletBill(x, y+2, z+5, Math.PI);
+            return { x, y, z: z+6 };
+        }
+        function createTwinTowers(x, y, z) {
+            createPlatform(x-5, y+6, z, 4, 12, 4, 'stone');
+            createPlatform(x+5, y+6, z, 4, 12, 4, 'stone');
+            createPlatform(x, y+10, z, 8, 1, 3, 'wood');
+            createGoomba(x, y+10.5, z, 8, 3);
+            return { x, y: y+10, z };
+        }
+        function createColosseum(x, y, z) {
+            createPlatform(x, y, z, 16, 1, 16, 'stone');
+            for(let i=0; i<8; i++) {
+                let a = (i/8)*Math.PI*2;
+                createPlatform(x+Math.cos(a)*7, y+3, z+Math.sin(a)*7, 2, 6, 2, 'brick');
+            }
+            createThwomp(x, y+5, z);
+            return { x, y, z: z+9 };
+        }
+        function createLighthouse(x, y, z) {
+            createPlatform(x, y, z, 6, 1, 6, 'stone');
+            createPlatform(x, y+10, z, 3, 20, 3, 0xff0000, 'cylinder');
+            createPlatform(x, y+20, z, 4, 1, 4, 'gold');
+            return { x, y, z: z+5 };
+        }
+        function createWindmill(x, y, z) {
+            createPlatform(x, y, z, 6, 1, 6, 'grass');
+            createPlatform(x, y+3, z, 3, 6, 3, 'wood');
+            createPlatform(x, y+4, z+1.6, 8, 0.5, 0.5, 0xffffff);
+            createPlatform(x, y+4, z+1.6, 0.5, 8, 0.5, 0xffffff);
+            return { x, y, z: z+5 };
+        }
+        function createGreenhouse(x, y, z) {
+            createPlatform(x, y, z, 8, 1, 8, 'grass');
+            createPlatform(x, y+4, z, 7, 0.5, 7, 0x88ccff);
+            createPowerup(x, y+1, z, 'flower');
+            return { x, y, z: z+6 };
+        }
+        function createWell(x, y, z) {
+            createPlatform(x, y, z, 5, 1, 5, 'stone');
+            createPlatform(x, y+1, z, 2, 1.5, 2, 0x000000, 'cylinder');
+            createPlatform(x, y+4, z, 4, 0.5, 2, 'wood');
+            return { x, y, z: z+4 };
+        }
+        function createShrine(x, y, z) {
+            createPlatform(x, y, z, 5, 1, 5, 'stone');
+            createPlatform(x, y+3, z-1.5, 4, 0.5, 1, 0x222222);
+            addStar(x, y+1, z);
+            return { x, y, z: z+4 };
+        }
+        function createGazebo(x, y, z) {
+            createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder');
+            createPlatform(x, y+3, z, 5, 0.5, 5, 0xaa5500, 'cylinder');
+            return { x, y, z: z+4 };
+        }
+        function createFloatingRuins(x, y, z, rng) {
+            for(let i=0; i<10; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone');
+            createThwomp(x, y+6, z);
+            return { x, y, z: z+10 };
+        }
+        function createSpiralStaircase(x, y, z) {
+            createPlatform(x, y+7, z, 2, 14, 2, 'brick', 'cylinder');
+            for(let i=0; i<12; i++) {
+                let a = (i/12)*Math.PI*2;
+                createPlatform(x+Math.cos(a)*6, y+i*1.2, z+Math.sin(a)*6, 3, 0.5, 3, 'wood');
+            }
+            return { x: x+6, y: y+14, z };
+        }
+        function createBuildingTower(x, y, z) {
+            createPlatform(x, y, z, 14, 1, 14, 'stone');
+            createPlatform(x, y+9, z, 2, 18, 2, 'stone');
+            return { x: x-3.5, y: y+10, z: z+3.5 };
+        }
+        function createBuildingCastle(x, y, z) {
+            createPlatform(x, y, z, 10, 1, 16, 'stone');
+            createPlatform(x+5, y+2, z, 1, 4, 16, 'brick');
+            createPlatform(x-5, y+2, z, 1, 4, 16, 'brick');
+            createThwomp(x, y+5, z);
+            return { x, y, z: z+9 };
+        }
+
+        // --- OBJECT CREATION HELPERS ---
+        function createPlatform(x, y, z, w, h, d, tex, shape='box') {
+            const geo = shape==='box' ? new THREE.BoxGeometry(w,h,d) : new THREE.CylinderGeometry(w/2,w/2,h,24);
+            const mat = textures[tex] 
+                ? new THREE.MeshStandardMaterial({map: textures[tex], roughness: 0.8}) 
+                : new THREE.MeshStandardMaterial({color: tex, roughness: 0.5});
+            const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); 
+            mesh.receiveShadow = mesh.castShadow = true;
+            scene.add(mesh); platforms.push({mesh, w, h, d});
+        }
+
+        function createMovingPlatform(x, y, z, w, h, d, col, axis, rng) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color: col, emissive: 0x222222}));
+            mesh.position.set(x,y,z); mesh.receiveShadow = mesh.castShadow = true; scene.add(mesh);
+            platforms.push({mesh, w, h, d});
+            movingPlatforms.push({mesh, axis, startX: x, startY: y, range: 4, speed: 0.03, offset: rng()*10});
+        }
+
+        function createGoomba(x, y, z, w, d) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshStandardMaterial({color: 0x8B4513}));
+            mesh.position.set(x,y,z); scene.add(mesh);
+            goombas.push({mesh, startX: x, limit: w/2, dir: 1, speed: 0.04});
+        }
+
+        function createThwomp(x, y, z) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(2,2.5,2), new THREE.MeshStandardMaterial({color: 0x777777}));
+            mesh.position.set(x,y,z); scene.add(mesh);
+            thwomps.push({mesh, homeY: y, state: 'IDLE', timer: 0, speed: 0});
+        }
+
+        function createBulletBill(x, y, z, ang) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({color: 0x111111}));
+            mesh.position.set(x,y,z); mesh.rotation.y = ang; scene.add(mesh);
+            bulletBills.push({mesh, dir: ang+Math.PI, timer: 0});
+        }
+
+        function createPowerup(x, y, z, type) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.4), new THREE.MeshStandardMaterial({color:0xffffff})));
+            const top = new THREE.Mesh(new THREE.SphereGeometry(0.5,12,12), new THREE.MeshStandardMaterial({color: type==='mushroom'?0xff0000:0xff8800}));
+            top.position.y=0.3; g.add(top); g.position.set(x,y,z); g.userData={type, startY:y};
+            scene.add(g); powerups.push({mesh: g, type});
+        }
+
+        function createParticles(pos, col, count) {
+            for(let i=0; i<count; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshBasicMaterial({color: col}));
+                p.position.copy(pos); p.userData = {vx: (Math.random()-0.5)*0.2, vy: Math.random()*0.2, vz: (Math.random()-0.5)*0.2, life: 1};
+                scene.add(p); particles.push(p);
+            }
+        }
+
+        function createPlayer() {
+            player = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xff0000})); body.castShadow=true; player.add(body);
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(1.05,0.2,0.6), new THREE.MeshStandardMaterial({color:0xaa0000})); cap.position.set(0,0.4,0.2); player.add(cap);
+            player.position.set(0, 5, 0); scene.add(player);
+        }
+
+        function shootFireball() {
+            const f = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({color: 0xff4400, emissive: 0xff0000}));
+            const dx = Math.sin(player.rotation.y), dz = Math.cos(player.rotation.y);
+            f.position.set(player.position.x+dx, player.position.y, player.position.z+dz);
+            f.userData = {vx: dx*0.4, vz: dz*0.4, life: 60};
+            scene.add(f); projectiles.push(f);
+        }
+
+        function handleDeath() {
+            if(isImmune || isGameOver) return;
+            lives--; document.getElementById('lives').innerText = lives;
+            mp.report('death');
+            if(lives > 0) restartGame(false); else endGame(false);
+        }
+
+        function restartGame(full) {
+            if(full) { mp.report('restart'); }
+            // Respawn op laatste checkpoint
+            player.position.set(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
+            targetRotationY = currentCheckpoint.rot; player.rotation.y = targetRotationY;
+            velocityX=0; velocityY=0; velocityZ=0; isGameOver=false; isBig=false; hasFirePower=false; isImmune=true;
+            player.scale.set(1,1,1); updateAppearance();
+            setTimeout(()=>isImmune=false, 2000);
+            document.getElementById('game-over').style.display='none';
+        }
+
+        function updateAppearance() {
+            player.children.forEach(c => { if(c.material) c.material.color.setHex(hasFirePower?0xffffff:0xff0000); });
+        }
+
+        // --- MAIN LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if(isPaused || isGameOver) return;
+
+            now = Date.now(); elapsed = now - then;
+            if(elapsed > fpsInterval) {
+                then = now - (elapsed % fpsInterval);
+                frameCount++;
+                if(now - lastTimeFPS >= 1000) { document.getElementById('fps-counter').innerText = frameCount; frameCount=0; lastTimeFPS=now; }
+
+                mp.sync();
+
+                const time = clock.getElapsedTime();
+
+                // Movement
+                let ix=0, iz=0;
+                if(keys['KeyW']) iz+=1; if(keys['KeyS']) iz-=1; if(keys['KeyA']) ix+=1; if(keys['KeyD']) ix-=1;
+                if(ix!==0||iz!==0) {
+                    const ang = targetRotationY + Math.atan2(ix, iz);
+                    velocityX += Math.sin(ang)*acceleration; velocityZ += Math.cos(ang)*acceleration;
+                    player.rotation.y = ang;
+                }
+                velocityX *= friction; velocityZ *= friction;
+                player.position.x += velocityX; player.position.z += velocityZ;
+                velocityY += gravity; player.position.y += velocityY;
+
+                // Moving Platforms logic
+                movingPlatforms.forEach(p => {
+                    const offset = Math.sin(time*2 + p.offset) * p.range;
+                    const oldX = p.mesh.position.x, oldY = p.mesh.position.y;
+                    if(p.axis==='h') p.mesh.position.x = p.startX + offset; else p.mesh.position.y = p.startY + offset;
+                    // Move player if on top
+                    if(player.position.y > p.mesh.position.y && player.position.y < p.mesh.position.y+2 && 
+                       Math.abs(player.position.x - p.mesh.position.x) < 2 && Math.abs(player.position.z - p.mesh.position.z) < 2) {
+                           player.position.x += (p.mesh.position.x - oldX);
+                           player.position.y += (p.mesh.position.y - oldY);
+                    }
+                });
+
+                // Collision
+                let grounded = false;
+                platforms.forEach(p => {
+                    const hw=p.w/2+0.4, hd=p.d/2+0.4;
+                    if(Math.abs(player.position.x - p.mesh.position.x) < hw && Math.abs(player.position.z - p.mesh.position.z) < hd) {
+                        const top = p.mesh.position.y + p.h/2;
+                        if(velocityY <= 0 && player.position.y-0.5 >= top-0.5 && player.position.y-0.5+velocityY <= top+0.1) {
+                            player.position.y = top+0.5; velocityY=0; jumpCount=0; grounded=true;
+                        }
+                    }
+                });
+
+                // Enemies
+                goombas.forEach((g,i) => {
+                    g.mesh.position.x += g.speed * g.dir;
+                    if(Math.abs(g.mesh.position.x - g.startX) > g.limit) g.dir *= -1;
+                    if(player.position.distanceTo(g.mesh.position) < 1.3) {
+                        if(velocityY < 0 && player.position.y > g.mesh.position.y+0.5) {
+                            scene.remove(g.mesh); goombas.splice(i,1); velocityY=0.25; createParticles(g.mesh.position, 0x8B4513, 5);
+                            score+=100; mp.report('score', {amount: 100});
+                        } else handleDeath();
+                    }
+                });
+
+                thwomps.forEach(t => {
+                    const d = player.position.distanceTo(t.mesh.position);
+                    if(t.state==='IDLE' && d<5) t.state='FALLING';
+                    if(t.state==='FALLING') { t.speed+=0.04; t.mesh.position.y-=t.speed; if(t.mesh.position.y < t.homeY-6) { t.state='WAITING'; t.speed=0; createParticles(t.mesh.position, 0x555555, 10); } }
+                    if(t.state==='WAITING') { t.timer++; if(t.timer>60) t.state='RISING'; }
+                    if(t.state==='RISING') { t.mesh.position.y+=0.05; if(t.mesh.position.y>=t.homeY) t.state='IDLE'; }
+                    if(d < 1.8) handleDeath();
+                });
+
+                bulletBills.forEach(b => {
+                    b.timer++;
+                    if(b.timer > 180 && player.position.distanceTo(b.mesh.position) < 40) {
+                        const bull = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshStandardMaterial({color:0x222222}));
+                        bull.position.copy(b.mesh.position);
+                        bull.userData = {vx: Math.sin(b.dir)*0.25, vz: Math.cos(b.dir)*0.25, life: 200};
+                        scene.add(bull); bullets.push(bull); b.timer=0;
+                    }
+                });
+
+                // Projectiles & Particles
+                for(let i=bullets.length-1; i>=0; i--) {
+                    const b = bullets[i]; b.position.x += b.userData.vx; b.position.z += b.userData.vz;
+                    if(b.position.distanceTo(player.position) < 1) handleDeath();
+                    b.userData.life--; if(b.userData.life<=0) { scene.remove(b); bullets.splice(i,1); }
+                }
+                for(let i=projectiles.length-1; i>=0; i--) {
+                    const p = projectiles[i]; p.position.x+=p.userData.vx; p.position.z+=p.userData.vz;
+                    p.userData.life--; if(p.userData.life<=0){scene.remove(p); projectiles.splice(i,1);}
+                    else {
+                        // Hit enemy?
+                        goombas.forEach((g,gi) => { if(p.position.distanceTo(g.mesh.position)<1.5) { scene.remove(g.mesh); goombas.splice(gi,1); scene.remove(p); projectiles.splice(i,1); createParticles(g.mesh.position, 0xff0000, 5); } });
+                    }
+                }
+                for(let i=particles.length-1; i>=0; i--) {
+                    const p = particles[i]; p.position.x+=p.userData.vx; p.position.y+=p.userData.vy; p.position.z+=p.userData.vz; p.userData.life-=0.02;
+                    if(p.userData.life<=0){scene.remove(p); particles.splice(i,1);}
+                }
+
+                // Pickups
+                stars.forEach((s,i) => {
+                    s.rotation.y += 0.05;
+                    if(player.position.distanceTo(s.position) < 1.5) { scene.remove(s); stars.splice(i,1); starsCollected++; mp.report('score', {amount: 200, isStar: true}); }
+                });
+                powerups.forEach((p,i) => {
+                    p.mesh.rotation.y+=0.05; p.mesh.position.y = p.mesh.userData.startY + Math.sin(time*3)*0.2;
+                    if(player.position.distanceTo(p.mesh.position) < 1.5) {
+                        const type = p.type; scene.remove(p.mesh); powerups.splice(i,1);
+                        document.getElementById('powerup-msg').style.display='block';
+                        document.getElementById('powerup-msg').innerText = type==='mushroom' ? "SUPER MUSHROOM" : "FIRE FLOWER";
+                        setTimeout(()=>document.getElementById('powerup-msg').style.display='none', 2000);
+                        if(type==='mushroom'){ isBig=true; player.scale.set(1.5,1.5,1.5); } else { hasFirePower=true; updateAppearance(); }
+                    }
+                });
+
+                // Checkpoints
+                checkpoints.forEach(cp => {
+                    if(!cp.active && player.position.distanceTo(cp.mesh.position) < 3) {
+                        cp.active=true; cp.mesh.children[1].material.color.setHex(0xff0000);
+                        currentCheckpoint = {x: cp.pos.x, y: cp.pos.y, z: cp.pos.z, rot: player.rotation.y};
+                        const msg = document.getElementById('checkpoint-msg'); msg.style.display='block'; setTimeout(()=>msg.style.display='none', 2000);
+                    }
+                });
+
+                if(flag && player.position.distanceTo(flag.position) < 2) endGame(true);
+                if(player.position.y < -30) handleDeath();
+
+                // Camera Logic
+                const dist = 10;
+                camera.position.lerp(new THREE.Vector3(
+                    player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*dist,
+                    player.position.y + Math.sin(targetRotationX)*dist + 2,
+                    player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*dist
+                ), 0.1);
+                camera.lookAt(player.position.x, player.position.y+1, player.position.z);
+
+                renderer.render(scene, camera);
+            }
+        }
+
+        // --- UTILS ---
         function openSettings() { isPaused=true; document.getElementById('settings-menu').style.display='block'; document.exitPointerLock(); }
         function closeSettings() { isPaused=false; document.getElementById('settings-menu').style.display='none'; renderer.domElement.requestPointerLock(); }
-        function updateSettingsUI() { document.getElementById('val-len').innerText = document.getElementById('opt-length').value; gameConfig.levelLength = parseInt(document.getElementById('opt-length').value); mp.name = document.getElementById('opt-name').value || "Mario"; }
+        function updateSettingsUI() { document.getElementById('val-len').innerText = document.getElementById('opt-length').value; gameConfig.levelLength = parseInt(document.getElementById('opt-length').value); gameConfig.sensitivity = document.getElementById('opt-sens').value * 0.0005; mp.name = document.getElementById('opt-name').value || "Mario"; }
 
         window.onload = init;
     </script>
