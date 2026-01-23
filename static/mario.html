@@ -503,12 +503,27 @@
             f.userData = {vx: dx*0.4, vz: dz*0.4, life: 60};
             scene.add(f); projectiles.push(f);
         }
-        function handleDeath() {
-            if(isImmune || isGameOver) return;
-            lives--; document.getElementById('lives').innerText = lives;
-            mp.report('death');
-            if(lives > 0) restartGame(false); else endGame(false);
-        }
+function handleDeath() {
+    // 1. Check direct of we al bezig zijn met doodgaan
+    if (isImmune || isGameOver) return;
+    
+    // 2. Zet onsterfelijkheid AAN zodat deze functie niet nog 60x wordt aangeroepen
+    isImmune = true; 
+
+    // 3. Trek lokaal af, maar ga niet onder 0
+    lives = Math.max(0, lives - 1); 
+    document.getElementById('lives').innerText = lives;
+
+    // 4. Stuur naar server
+    mp.report('death');
+
+    // 5. Beslis: Restart of Game Over
+    if (lives > 0) {
+        restartGame(false);
+    } else {
+        endGame(false);
+    }
+}
         function restartGame(full) {
             if(full) { mp.report('restart'); }
             player.position.set(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
@@ -685,7 +700,15 @@
                 });
 
                 if(flag && player.position.distanceTo(flag.position) < 2) endGame(true);
-                if(player.position.y < -30) handleDeath();
+                // Void Check
+if (player.position.y < -30) {
+    // Reset fysica direct om te voorkomen dat we oneindig blijven vallen/triggeren
+    player.position.y = 0; 
+    velocityY = 0;
+    
+    // Roep dan pas de dood functie aan
+    handleDeath();
+}
 
                 const d = 10;
                 camera.position.lerp(new THREE.Vector3(player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*d, player.position.y + Math.sin(targetRotationX)*d + 2, player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*d), 0.1);
