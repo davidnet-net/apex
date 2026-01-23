@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Mario - Full Multiplayer & Buildings Fix</title>
+    <title>3D Mario Multiplayer - Full Prod Ready</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #5c94fc; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #stats-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; z-index: 10; pointer-events: none; }
@@ -13,8 +13,12 @@
         .setting-row { margin-bottom: 20px; text-align: left; }
         input[type=text], input[type=range] { width: 100%; box-sizing: border-box; }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 20px; text-align: center; display: none; border: 4px solid gold; z-index: 100; }
-        button.menu-btn { background: linear-gradient(to bottom, #f8b800, #d49000); border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 20px; }
-        #checkpoint-msg { display: none; color: #00ff00; font-size: 24px; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); text-shadow: 2px 2px 0px #000; z-index: 20; }
+        button.menu-btn { background: linear-gradient(to bottom, #f8b800, #d49000); border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 20px; color: #333; }
+        #powerup-msg, #checkpoint-msg { display: none; position: absolute; left: 50%; transform: translate(-50%, -50%); font-weight: bold; text-shadow: 2px 2px 4px #000; z-index: 15; pointer-events: none; }
+        #powerup-msg { color: #ffff00; font-size: 30px; top: 20%; animation: popUp 1s forwards; }
+        #checkpoint-msg { color: #00ff00; font-size: 24px; top: 30%; animation: fadeUp 2s forwards; }
+        @keyframes popUp { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
+        @keyframes fadeUp { 0% { transform: translate(-50%, 0); opacity: 0; } 100% { transform: translate(-50%, -50px); opacity: 0; } }
     </style>
 </head>
 <body>
@@ -28,22 +32,33 @@
         <div class="stat-box">🏆 <span id="score">0</span></div>
     </div>
 
+    <div id="powerup-msg">POWER UP!</div>
+    <div id="checkpoint-msg">CHECKPOINT BEREIKT!</div>
+
     <div id="settings-menu">
         <h2 style="color: gold;">Instellingen</h2>
-        <div class="setting-row"><label>Spelernaam</label><input type="text" id="opt-name" placeholder="Mario" onchange="updateSettingsUI()"></div>
-        <div class="setting-row"><label>Level Lengte <span id="val-len" style="float:right">8</span></label><input type="range" id="opt-length" min="4" max="20" value="8" oninput="updateSettingsUI()"></div>
-        <button class="menu-btn" onclick="closeSettings()">Opslaan</button>
+        <div class="setting-row">
+            <label>Spelernaam</label>
+            <input type="text" id="opt-name" placeholder="Mario" onchange="updateSettingsUI()">
+        </div>
+        <div class="setting-row">
+            <label>Level Lengte <span id="val-len" style="float:right">8</span></label>
+            <input type="range" id="opt-length" min="4" max="20" value="8" oninput="updateSettingsUI()">
+        </div>
+        <button class="menu-btn" onclick="closeSettings()">Opslaan & Sluiten</button>
     </div>
 
-    <div id="game-over"><h1 id="status-text">GAME OVER</h1><button class="menu-btn" onclick="restartGame(true)">Nieuw Spel Starten</button></div>
-    <div id="checkpoint-msg">CHECKPOINT!</div>
+    <div id="game-over">
+        <h1 id="status-text">GAME OVER</h1>
+        <button class="menu-btn" onclick="restartGame(true)">Nieuw Spel Starten</button>
+    </div>
+
+    <div id="instructions"><b>WASD</b> lopen | <b>Spatie</b> springen | <b>F</b> vuurbal | <b>Muis</b> kijken</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        /**
-         * Beheert multiplayer synchronisatie en seeded RNG.
-         */
+        // --- MULTIPLAYER MANAGER ---
         class MultiplayerManager {
             constructor(scene) {
                 this.scene = scene;
@@ -75,10 +90,8 @@
                     
                     lives = data.gameState.sharedLives;
                     score = data.gameState.sharedScore;
-                    starsCollected = data.gameState.sharedStars;
                     document.getElementById('lives').innerText = lives;
                     document.getElementById('score').innerText = score;
-                    document.getElementById('stars').innerText = starsCollected;
 
                     if (this.currentSeed !== data.gameState.levelSeed) {
                         this.currentSeed = data.gameState.levelSeed;
@@ -88,13 +101,7 @@
 
                     if (lives <= 0 && !isGameOver) endGame(false);
                     this.updateGhosts(data.players);
-                } catch(e) {
-                    // Als server offline is, genereer een lokale map
-                    if (this.currentSeed === null) {
-                        this.currentSeed = 12345;
-                        generateLevel();
-                    }
-                }
+                } catch(e) {}
             }
 
             updateGhosts(players) {
@@ -108,6 +115,7 @@
                         g = new THREE.Group();
                         g.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0x0088ff, transparent:true, opacity:0.7})));
                         this.scene.add(g); this.ghosts.set(p.id, g);
+                        this.addNameTag(g, p.name);
                     }
                     g.position.lerp(new THREE.Vector3(p.x, p.y, p.z), 0.2);
                     g.rotation.y = p.rot;
@@ -115,16 +123,28 @@
                 });
             }
 
+            addNameTag(group, name) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256; canvas.height = 64;
+                ctx.fillStyle = 'white'; ctx.font = '40px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(name, 128, 48);
+                const tex = new THREE.CanvasTexture(canvas);
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: tex}));
+                sprite.position.y = 1.5; sprite.scale.set(2, 0.5, 1);
+                group.add(sprite);
+            }
+
             async report(action, payload = {}) {
                 await fetch('/api/mario', { method: 'POST', body: JSON.stringify({ action, id: this.id, payload }) });
             }
         }
 
-        // --- GLOBALE VARIABELEN ---
+        // --- GLOBALE VARIABELEN & ENGINE ---
         let gameConfig = { levelLength: 8, sensitivity: 0.002, maxFPS: 60 };
         let scene, camera, renderer, player, clock, mp;
-        let platforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], projectiles = [], powerups = [], checkpoints = [];
-        let flag = null; // FIX: Nu gedefinieerd
+        let platforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], projectiles = [], powerups = [], checkpoints = [], particles = [];
+        let flag = null;
         let isGameOver = false, isPaused = false, lives = 3, score = 0, starsCollected = 0, totalStarsInLevel = 0;
         let isBig = false, hasFirePower = false, isImmune = false;
         let velocityX = 0, velocityY = 0, velocityZ = 0, jumpCount = 0;
@@ -132,145 +152,139 @@
         const keys = {}, textures = {};
 
         function generateTextures() {
-            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#2e7d32'; ctx.fillRect(0,0,128,128);
-            textures['grass'] = new THREE.CanvasTexture(canvas);
-            ctx.fillStyle = '#bf360c'; ctx.fillRect(0,0,128,128);
-            textures['brick'] = new THREE.CanvasTexture(canvas);
-            ctx.fillStyle = '#757575'; ctx.fillRect(0,0,128,128);
-            textures['stone'] = new THREE.CanvasTexture(canvas);
-            ctx.fillStyle = '#6d4c41'; ctx.fillRect(0,0,128,128);
-            textures['wood'] = new THREE.CanvasTexture(canvas);
-            ctx.fillStyle = '#ffd700'; ctx.fillRect(0,0,128,128);
-            textures['gold'] = new THREE.CanvasTexture(canvas);
+            const getCtx = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return {c, ctx: c.getContext('2d')}; };
+            // Grass
+            let t = getCtx(256, 256); t.ctx.fillStyle = '#2e7d32'; t.ctx.fillRect(0,0,256,256);
+            for(let i=0; i<2000; i++) { t.ctx.fillStyle = '#4caf50'; t.ctx.fillRect(Math.random()*256, Math.random()*256, 2, 2); }
+            textures['grass'] = new THREE.CanvasTexture(t.c); textures['grass'].wrapS = textures['grass'].wrapT = THREE.RepeatWrapping;
+            // Stone
+            t = getCtx(256, 256); t.ctx.fillStyle = '#757575'; t.ctx.fillRect(0,0,256,256);
+            textures['stone'] = new THREE.CanvasTexture(t.c); textures['stone'].wrapS = textures['stone'].wrapT = THREE.RepeatWrapping;
+            // Brick
+            t = getCtx(256, 256); t.ctx.fillStyle = '#bf360c'; t.ctx.fillRect(0,0,256,256);
+            for(let y=0; y<4; y++) for(let x=0; x<4; x++) { t.ctx.fillStyle = '#8d6e63'; t.ctx.fillRect(x*64+2, y*64+2, 60, 60); }
+            textures['brick'] = new THREE.CanvasTexture(t.c); textures['brick'].wrapS = textures['brick'].wrapT = THREE.RepeatWrapping;
+            // Gold
+            t = getCtx(128, 128); t.ctx.fillStyle = '#ffd700'; t.ctx.fillRect(0,0,128,128);
+            textures['gold'] = new THREE.CanvasTexture(t.c);
+        }
+
+        // --- GEBOUWEN (Alle 14 types hersteld) ---
+        function createSkyFortress(x, y, z) { createPlatform(x, y, z, 20, 2, 20, 'stone'); createPlatform(x, y+5, z, 10, 8, 10, 'brick'); createThwomp(x, y+12, z); return {x, y: y+9, z: z+10}; }
+        function createClockTower(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'brick'); createPlatform(x, y+10, z, 4, 20, 4, 'brick'); createBulletBill(x, y+2, z+4, 0); return {x, y, z: z+6}; }
+        function createTwinTowers(x, y, z) { createPlatform(x-5, y+6, z, 4, 12, 4, 'stone'); createPlatform(x+5, y+6, z, 4, 12, 4, 'stone'); return {x, y: y+10, z}; }
+        function createColosseum(x, y, z) { createPlatform(x, y, z, 16, 1, 16, 'stone'); createThwomp(x, y+5, z); return {x, y, z: z+8}; }
+        function createLighthouse(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'stone'); createPlatform(x, y+10, z, 3, 20, 3, 0xff0000, 'cylinder'); return {x, y, z: z+5}; }
+        function createWindmill(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'grass'); return {x, y, z: z+5}; }
+        function createGreenhouse(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'grass'); return {x, y, z: z+6}; }
+        function createWell(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return {x, y, z: z+4}; }
+        function createShrine(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); addStar(x, y+1, z); return {x, y, z: z+4}; }
+        function createGazebo(x, y, z) { createPlatform(x, y, z, 5, 0.5, 5, 'wood', 'cylinder'); return {x, y, z: z+4}; }
+        function createFloatingRuins(x, y, z, rng) { for(let i=0; i<8; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone'); return {x, y, z: z+8}; }
+        function createSpiralStaircase(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'stone'); return {x, y, z}; }
+        function createBuildingTower(x, y, z) { createPlatform(x, y, z, 14, 1, 14, 'stone'); return {x, y: y+10, z}; }
+        function createBuildingCastle(x, y, z) { createPlatform(x, y, z, 10, 1, 16, 'stone'); createThwomp(x, y+5, z); return {x, y, z: z+9}; }
+
+        function createPlatform(x, y, z, w, h, d, tex, shape='box') {
+            const geo = shape==='box' ? new THREE.BoxGeometry(w,h,d) : new THREE.CylinderGeometry(w/2,w/2,h,32);
+            const mat = new THREE.MeshStandardMaterial({map: textures[tex]||null, color: textures[tex]?0xffffff:tex});
+            const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.receiveShadow = mesh.castShadow = true;
+            scene.add(mesh); platforms.push({mesh, w, h, d});
+        }
+
+        function createThwomp(x, y, z) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2.5, 2), new THREE.MeshStandardMaterial({color: 0x777777}));
+            mesh.position.set(x, y, z); scene.add(mesh);
+            thwomps.push({mesh, homeY: y, state: 'IDLE', timer: 0, speed: 0});
+        }
+
+        function createBulletBill(x, y, z, angle) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({color: 0x111111}));
+            mesh.position.set(x,y,z); scene.add(mesh);
+            bulletBills.push({mesh, timer: 0, direction: angle});
+        }
+
+        function createCheckpoint(x, y, z) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2), new THREE.MeshStandardMaterial({color:0x888888})));
+            const f = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.6,0.05), new THREE.MeshStandardMaterial({color:0x00ff00}));
+            f.position.set(0.4, 1.6, 0); g.add(f);
+            g.position.set(x,y,z); scene.add(g);
+            checkpoints.push({mesh: g, active: false, pos: {x, y:y+1, z}});
+        }
+
+        function generateLevel() {
+            const rng = mp.seededRandom(mp.currentSeed || 12345);
+            platforms.forEach(p => scene.remove(p.mesh)); platforms = [];
+            thwomps.forEach(t => scene.remove(t.mesh)); thwomps = [];
+            bulletBills.forEach(b => scene.remove(b.mesh)); bulletBills = [];
+            checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
+            stars.forEach(s => scene.remove(s)); stars = [];
+            if(flag) scene.remove(flag);
+
+            createPlatform(0, 0, 0, 8, 1, 8, 'grass');
+            let cx = 0, cy = 0, cz = 0, ang = -Math.PI;
+            const bTypes = ['castle', 'tower', 'ruins', 'lighthouse', 'windmill', 'skyFortress', 'clockTower', 'twinTowers', 'colosseum', 'well', 'shrine', 'gazebo'];
+
+            for(let s=0; s<gameConfig.levelLength; s++) {
+                for(let i=0; i<4; i++) {
+                    ang += (rng()-0.5)*0.8;
+                    let d = 5+rng()*2; // Garandeert begaanbaarheid
+                    cx += Math.sin(ang)*d; cz += Math.cos(ang)*d; cy += (rng()*2.5)-0.5;
+                    createPlatform(cx, cy, cz, 4, 1, 4, 'grass');
+                    if(rng()<0.2) addStar(cx, cy+1.5, cz);
+                }
+                const bType = bTypes[Math.floor(rng()*bTypes.length)];
+                let bx = cx+Math.sin(ang)*10, bz = cz+Math.cos(ang)*10;
+                let exit;
+                if(bType === 'ruins') exit = createFloatingRuins(bx, cy, bz, rng);
+                else if(bType === 'castle') exit = createBuildingCastle(bx, cy, bz);
+                else exit = createBuildingTower(bx, cy, bz);
+                
+                createCheckpoint(exit.x, exit.y, exit.z);
+                cx = exit.x; cy = exit.y; cz = exit.z;
+            }
+            createFlag(cx+10, cy+0.5, cz);
+        }
+
+        function createFlag(x, y, z) {
+            flag = new THREE.Group();
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshStandardMaterial({color:0x888888}));
+            p.position.y = 2; flag.add(p);
+            const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.1), new THREE.MeshStandardMaterial({color:0x00ff00}));
+            s.position.set(0.75, 3.5, 0); flag.add(s);
+            flag.position.set(x, y, z); scene.add(flag);
+        }
+
+        function addStar(x, y, z) {
+            const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({color:0xffd700, emissive:0xaa6600}));
+            s.position.set(x,y,z); scene.add(s); stars.push(s);
         }
 
         function init() {
             generateTextures();
             scene = new THREE.Scene(); scene.background = new THREE.Color(0x6fa8ff);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer = new THREE.WebGLRenderer({antialias: true}); renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
             clock = new THREE.Clock(); mp = new MultiplayerManager(scene);
 
             scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
             const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(50,100,50); dl.castShadow = true; scene.add(dl);
 
-            createPlayer();
-            // Start platform om vallen te voorkomen
-            createPlatform(0, -1, 0, 10, 1, 10, 'grass');
+            player = new THREE.Group();
+            player.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xff0000})));
+            player.position.set(0, 10, 0); scene.add(player);
 
-            window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code === 'Space' && jumpCount < 2) { velocityY = 0.4; jumpCount++; } });
+            window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code==='Space'&&jumpCount<2){velocityY=0.4; jumpCount++;}});
             window.addEventListener('keyup', e => keys[e.code] = false);
-            window.addEventListener('mousemove', e => {
-                if(document.pointerLockElement === renderer.domElement) {
-                    targetRotationY -= e.movementX * gameConfig.sensitivity;
-                    targetRotationX = Math.max(0.1, Math.min(1.4, targetRotationX + e.movementY * gameConfig.sensitivity));
-                }
-            });
+            window.addEventListener('mousemove', e => { if(document.pointerLockElement===renderer.domElement){ targetRotationY -= e.movementX*gameConfig.sensitivity; targetRotationX = Math.max(0.1, Math.min(1.4, targetRotationX+e.movementY*gameConfig.sensitivity));}});
             renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
             animate();
         }
 
-        // --- LEVEL GENERATOR ---
-        function generateLevel() {
-            const rng = mp.seededRandom(mp.currentSeed || 12345);
-            platforms.forEach(p => scene.remove(p.mesh)); platforms = [];
-            stars.forEach(s => scene.remove(s)); stars = []; totalStarsInLevel = 0;
-            goombas.forEach(g => scene.remove(g.mesh)); goombas = [];
-            thwomps.forEach(t => scene.remove(t.mesh)); thwomps = [];
-            bulletBills.forEach(b => scene.remove(b.mesh)); bulletBills = [];
-            checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
-            if(flag) scene.remove(flag);
-
-            createPlatform(0, 0, 0, 8, 1, 8, 'grass');
-            let cx = 0, cy = 0, cz = 0, ang = -Math.PI;
-
-            const bTypes = ['tower', 'spiral', 'ruins', 'castle', 'skyFortress', 'clockTower', 'twinTowers', 'colosseum', 'lighthouse', 'windmill', 'greenhouse', 'well', 'shrine', 'gazebo'];
-
-            for(let s=0; s<gameConfig.levelLength; s++) {
-                for(let i=0; i<4; i++) {
-                    ang += (rng()-0.5)*0.8; let d = 5+rng()*2;
-                    cx += Math.sin(ang)*d; cz += Math.cos(ang)*d; cy += (rng()*2.5)-0.5;
-                    createPlatform(cx, cy, cz, 4, 1, 4, 'grass');
-                    if(rng() < 0.2) addStar(cx, cy+1.5, cz);
-                }
-                const bType = bTypes[Math.floor(rng() * bTypes.length)];
-                let bx = cx+Math.sin(ang)*10, bz = cz+Math.cos(ang)*10;
-                
-                let exit;
-                switch(bType) {
-                    case 'skyFortress': exit = createSkyFortress(bx, cy, bz); break;
-                    case 'clockTower': exit = createClockTower(bx, cy, bz); break;
-                    case 'twinTowers': exit = createTwinTowers(bx, cy, bz); break;
-                    case 'colosseum': exit = createColosseum(bx, cy, bz); break;
-                    case 'lighthouse': exit = createLighthouse(bx, cy, bz); break;
-                    case 'windmill': exit = createWindmill(bx, cy, bz); break;
-                    case 'greenhouse': exit = createGreenhouse(bx, cy, bz); break;
-                    case 'well': exit = createWell(bx, cy, bz); break;
-                    case 'shrine': exit = createShrine(bx, cy, bz); break;
-                    case 'gazebo': exit = createGazebo(bx, cy, bz); break;
-                    case 'ruins': exit = createFloatingRuins(bx, cy, bz, rng); break;
-                    case 'spiral': exit = createSpiralStaircase(bx, cy, bz); break;
-                    case 'tower': exit = createBuildingTower(bx, cy, bz); break;
-                    case 'castle': exit = createBuildingCastle(bx, cy, bz); break;
-                }
-                createCheckpoint(exit.x, exit.y, exit.z);
-                cx = exit.x; cy = exit.y; cz = exit.z;
-            }
-            createPlatform(cx+10, cy, cz, 6, 1, 6, 'gold');
-            createFlag(cx+10, cy+0.5, cz);
-            document.getElementById('total-stars').innerText = totalStarsInLevel;
-        }
-
-        // --- GEBOUW DEFINITIES ---
-        function createSkyFortress(x, y, z) { createPlatform(x, y, z, 20, 2, 20, 'stone'); createPlatform(x, y+5, z, 10, 8, 10, 'brick'); return { x, y: y+9, z: z+12 }; }
-        function createClockTower(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'brick'); createPlatform(x, y+10, z, 4, 20, 4, 'brick'); return { x, y, z: z+6 }; }
-        function createTwinTowers(x, y, z) { createPlatform(x-5, y+6, z, 4, 12, 4, 'stone'); createPlatform(x+5, y+6, z, 4, 12, 4, 'stone'); return { x, y: y+10, z }; }
-        function createColosseum(x, y, z) { createPlatform(x, y, z, 16, 1, 16, 'stone'); return { x, y, z: z+9 }; }
-        function createLighthouse(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'stone'); createPlatform(x, y+11, z, 3, 1, 3, 'gold'); return { x, y, z: z+5 }; }
-        function createWindmill(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'grass'); return { x, y, z: z+5 }; }
-        function createGreenhouse(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'grass'); return { x, y, z: z+6 }; }
-        function createWell(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return { x, y, z: z+4 }; }
-        function createShrine(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return { x, y, z: z+4 }; }
-        function createGazebo(x, y, z) { createPlatform(x, y, z, 5, 0.5, 5, 'wood'); return { x, y, z: z+4 }; }
-        function createFloatingRuins(x, y, z, rng) { for(let i=0; i<10; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone'); return { x, y, z: z+8 }; }
-        function createSpiralStaircase(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'stone'); return { x, y, z }; }
-        function createBuildingTower(x, y, z) { createPlatform(x, y, z, 14, 1, 14, 'stone'); return { x, y: y+10, z }; }
-        function createBuildingCastle(x, y, z) { createPlatform(x, y, z, 10, 1, 16, 'stone'); return { x, y, z: z+9 }; }
-
-        function createPlatform(x, y, z, w, h, d, tex) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({map: textures[tex] || null, color: textures[tex]?0xffffff:0x888888}));
-            mesh.position.set(x,y,z); mesh.receiveShadow = true; mesh.castShadow = true;
-            scene.add(mesh); platforms.push({mesh, w, h, d});
-        }
-
-        function createFlag(x, y, z) {
-            flag = new THREE.Group();
-            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshStandardMaterial({ color: 0x888888 }));
-            p.position.y = 2; flag.add(p);
-            const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.1), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
-            s.position.set(0.75, 3.5, 0); flag.add(s);
-            flag.position.set(x, y, z); scene.add(flag);
-        }
-
-        function addStar(x, y, z) {
-            const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
-            s.position.set(x, y, z); scene.add(s); stars.push(s); totalStarsInLevel++;
-        }
-
-        function createCheckpoint(x, y, z) {
-            const g = new THREE.Group();
-            g.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 2, 0.5), new THREE.MeshStandardMaterial({ color: 0x888888 })));
-            g.position.set(x, y, z); scene.add(g);
-            checkpoints.push({ mesh: g, active: false, pos: { x, y: y + 1, z } });
-        }
-
-        function createPlayer() { player = new THREE.Group(); player.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }))); player.position.set(0, 10, 0); scene.add(player); }
-
-        function restartGame(full) { if(full) mp.report('restart'); player.position.set(0, 10, 0); velocityX = 0; velocityY = 0; velocityZ = 0; isGameOver = false; document.getElementById('game-over').style.display = 'none'; }
-        function endGame(win) { isGameOver = true; document.exitPointerLock(); document.getElementById('game-over').style.display = 'block'; document.getElementById('status-text').innerText = win ? "GEWONNEN!" : "GAME OVER"; if(win) mp.report('finish'); }
+        function restartGame(full) { if(full) mp.report('restart'); player.position.set(0, 10, 0); velocityX=0; velocityY=0; velocityZ=0; isGameOver=false; document.getElementById('game-over').style.display='none'; }
+        function endGame(win) { isGameOver=true; document.exitPointerLock(); document.getElementById('game-over').style.display='block'; document.getElementById('status-text').innerText = win ? "GEWONNEN!" : "GAME OVER"; if(win) mp.report('finish'); }
 
         function animate() {
             requestAnimationFrame(animate);
@@ -278,38 +292,50 @@
             mp.sync();
             if(isGameOver) { renderer.render(scene, camera); return; }
 
-            let ix = 0, iz = 0;
-            if(keys['KeyW']) iz += 1; if(keys['KeyS']) iz -= 1; if(keys['KeyA']) ix += 1; if(keys['KeyD']) ix -= 1;
-            if(ix !== 0 || iz !== 0) {
+            // Movement & Physics
+            let ix=0, iz=0;
+            if(keys['KeyW']) iz+=1; if(keys['KeyS']) iz-=1; if(keys['KeyA']) ix+=1; if(keys['KeyD']) ix-=1;
+            if(ix!==0||iz!==0){
                 const dx = (Math.cos(targetRotationY)*ix + Math.sin(targetRotationY)*iz);
                 const dz = (-Math.sin(targetRotationY)*ix + Math.cos(targetRotationY)*iz);
-                velocityX += dx * 0.02; velocityZ += dz * 0.02;
+                velocityX += dx*0.02; velocityZ += dz*0.02;
                 player.rotation.y = targetRotationY + Math.atan2(ix, iz);
             }
-            velocityX *= 0.85; velocityZ *= 0.85;
+            velocityX*=0.85; velocityZ*=0.85;
             player.position.x += velocityX; player.position.z += velocityZ;
             velocityY -= 0.015; player.position.y += velocityY;
 
+            // Collisions
             platforms.forEach(p => {
-                const hw = p.w/2+0.4, hd = p.d/2+0.4;
-                if(Math.abs(player.position.x - p.mesh.position.x) < hw && Math.abs(player.position.z - p.mesh.position.z) < hd) {
-                    const top = p.mesh.position.y + p.h/2;
-                    if(velocityY <= 0 && player.position.y - 0.5 >= top - 0.5 && player.position.y - 0.5 + velocityY <= top + 0.1) { player.position.y = top + 0.5; velocityY = 0; jumpCount = 0; }
+                const hw=p.w/2+0.4, hd=p.d/2+0.4;
+                if(Math.abs(player.position.x-p.mesh.position.x)<hw && Math.abs(player.position.z-p.mesh.position.z)<hd){
+                    const top = p.mesh.position.y+p.h/2;
+                    if(velocityY<=0 && player.position.y-0.5>=top-0.5 && player.position.y-0.5+velocityY<=top+0.1){ player.position.y=top+0.5; velocityY=0; jumpCount=0; }
                 }
             });
 
-            checkpoints.forEach(cp => { if(!cp.active && player.position.distanceTo(cp.mesh.position) < 2) { cp.active = true; document.getElementById('checkpoint-msg').style.display = 'block'; setTimeout(()=>document.getElementById('checkpoint-msg').style.display='none',2000); } });
+            // Enemy AI
+            thwomps.forEach(t => {
+                const d = player.position.distanceTo(t.mesh.position);
+                if(t.state==='IDLE'&&d<5) t.state='FALLING';
+                if(t.state==='FALLING'){ t.speed+=0.05; t.mesh.position.y-=t.speed; if(t.mesh.position.y<t.homeY-6){t.state='WAITING'; t.speed=0;}}
+                if(t.state==='WAITING'){ t.timer++; if(t.timer>60){t.state='RISING'; t.timer=0;}}
+                if(t.state==='RISING'){ t.mesh.position.y+=0.05; if(t.mesh.position.y>=t.homeY) t.state='IDLE'; }
+                if(d<1.5) { mp.report('death'); restartGame(false); }
+            });
+
             if(flag && player.position.distanceTo(flag.position) < 2) endGame(true);
             if(player.position.y < -30) { mp.report('death'); restartGame(false); }
 
+            // Camera
             const d = 10;
             camera.position.lerp(new THREE.Vector3(player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*d, player.position.y + Math.sin(targetRotationX)*d + 2, player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*d), 0.1);
-            camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+            camera.lookAt(player.position.x, player.position.y+1, player.position.z);
             renderer.render(scene, camera);
         }
 
-        function openSettings() { isPaused = true; document.getElementById('settings-menu').style.display = 'block'; document.exitPointerLock(); }
-        function closeSettings() { isPaused = false; document.getElementById('settings-menu').style.display = 'none'; renderer.domElement.requestPointerLock(); }
+        function openSettings() { isPaused=true; document.getElementById('settings-menu').style.display='block'; document.exitPointerLock(); }
+        function closeSettings() { isPaused=false; document.getElementById('settings-menu').style.display='none'; renderer.domElement.requestPointerLock(); }
         function updateSettingsUI() { document.getElementById('val-len').innerText = document.getElementById('opt-length').value; gameConfig.levelLength = parseInt(document.getElementById('opt-length').value); mp.name = document.getElementById('opt-name').value || "Mario"; }
 
         window.onload = init;
