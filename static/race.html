@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kart Racer Deluxe - Super Jump Edition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+            font-family: 'Arial Rounded MT Bold', 'Verdana', sans-serif;
+            user-select: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #score-board {
+            color: #FFD700;
+            -webkit-text-stroke: 1.5px #000;
+            text-shadow: 3px 3px 0px #000;
+            font-size: 32px;
+            font-weight: 900;
+            text-align: left;
+        }
+
+        #speed-board {
+            color: #ffffff;
+            -webkit-text-stroke: 1.5px #000;
+            text-shadow: 3px 3px 0px #000;
+            font-size: 32px;
+            font-weight: 900;
+            text-align: right;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        #jump-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #00FFFF;
+            -webkit-text-stroke: 2px #000;
+            text-shadow: 0 0 20px #00FFFF;
+            font-weight: 900;
+            font-style: italic;
+            display: none;
+            z-index: 10;
+        }
+
+        #message-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        h1 {
+            font-size: 64px;
+            margin: 0 0 10px 0;
+            color: #FF0000;
+            text-shadow: 4px 4px 0px #000000;
+            text-transform: uppercase;
+            font-style: italic;
+            letter-spacing: 2px;
+        }
+
+        p {
+            font-size: 24px;
+            background: linear-gradient(45deg, #ff9900, #ffcc00);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 4px solid #fff;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .controls-hint {
+            font-size: 16px;
+            color: #fff;
+            margin-top: 20px;
+            background-color: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div id="score-board">SCORE: 0</div>
+        <div id="speed-board">0 KM/U</div>
+        <div id="jump-message">SUPER JUMP!</div>
+        
+        <div id="message-center">
+            <h1>Kart Racer DX</h1>
+            <p id="main-message">Druk op 'W' om te racen!</p>
+            <div class="controls-hint">
+                A / D: Sturen | W: Gas | S: Remmen | R: Herstart
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATIE ---
+        const GAME_CONFIG = {
+            laneWidth: 4,
+            roadWidth: 34,
+            speedScale: 0.5,
+            maxSpeed: 140, // Iets sneller
+            acceleration: 0.5,
+            deceleration: 0.2,
+            turnSpeed: 0.22,
+            colors: {
+                sky: 0x87CEEB,
+                grass: 0x66CD00,
+                road: 0x555555,
+                curbRed: 0xFF0000,
+                curbWhite: 0xFFFFFF,
+                car: 0xE70000,
+                pipe: 0x00AA00,
+                box: 0xFFD700,
+                goomba: 0x8B4513,
+                ramp: 0xFF00FF 
+            },
+            renderDistance: 450 // Nog iets verder voor hoge snelheid
+        };
+
+        // --- VARIABELEN ---
+        let scene, camera, renderer;
+        let playerCar, roadMesh;
+        let obstacles = [];
+        let roadMarkings = [];
+        let scenery = []; 
+        let score = 0;
+        let speed = 0;
+        let distanceTraveled = 0;
+        let gameOver = false;
+        let gameActive = false;
+        
+        // Fysica voor springen
+        let yVelocity = 0;
+        const GRAVITY = 0.025;
+        const BASE_Y = 0.5;
+        
+        // Super Jump Status
+        let isSuperJumping = false;
+        let jumpTimer = 0;
+        const JUMP_DURATION = 300;
+
+        const keys = { w: false, s: false, a: false, d: false };
+
+        const uiScore = document.getElementById('score-board');
+        const uiSpeed = document.getElementById('speed-board');
+        const uiMessage = document.getElementById('message-center');
+        const uiMainText = document.getElementById('main-message');
+        const uiJumpMsg = document.getElementById('jump-message');
+
+        // --- INITIALISATIE ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(GAME_CONFIG.colors.sky);
+            scene.fog = new THREE.Fog(GAME_CONFIG.colors.sky, 100, GAME_CONFIG.renderDistance);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 12);
+            camera.lookAt(0, 0, -5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 600; 
+            dirLight.shadow.camera.left = -150;
+            dirLight.shadow.camera.right = 150;
+            dirLight.shadow.camera.top = 150;
+            dirLight.shadow.camera.bottom = -150;
+            scene.add(dirLight);
+
+            createEnvironment();
+            createPlayerCar();
+            createClouds();
+            
+            for(let i=0; i<120; i++) {
+                spawnScenery(true);
+            }
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+
+            animate();
+        }
+
+        // --- OBJECT CREATIE ---
+
+        function createEnvironment() {
+            const roadGeo = new THREE.PlaneGeometry(GAME_CONFIG.roadWidth, 1000);
+            const roadMat = new THREE.MeshPhongMaterial({ color: GAME_CONFIG.colors.road });
+            roadMesh = new THREE.Mesh(roadGeo, roadMat);
+            roadMesh.rotation.x = -Math.PI / 2;
+            roadMesh.position.z = -300;
+            roadMesh.receiveShadow = true;
+            scene.add(roadMesh);
+
+            const grassGeo = new THREE.PlaneGeometry(2000, 2000);
+            const grassMat = new THREE.MeshPhongMaterial({ color: GAME_CONFIG.colors.grass });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.y = -0.1;
+            grass.position.z = -500;
+            grass.receiveShadow = true;
+            scene.add(grass);
+
+            const curbGeo = new THREE.BoxGeometry(1, 0.2, 4);
+            const curbMatRed = new THREE.MeshBasicMaterial({ color: GAME_CONFIG.colors.curbRed });
+            const curbMatWhite = new THREE.MeshBasicMaterial({ color: GAME_CONFIG.colors.curbWhite });
+            
+            for(let i=0; i<120; i++) {
+                const isRed = i % 2 === 0;
+                const mat = isRed ? curbMatRed : curbMatWhite;
+                
+                const leftCurb = new THREE.Mesh(curbGeo, mat);
+                leftCurb.position.set(-GAME_CONFIG.roadWidth/2 - 0.5, 0, -i * 4);
+                scene.add(leftCurb);
+                roadMarkings.push(leftCurb);
+
+                const rightCurb = new THREE.Mesh(curbGeo, mat);
+                rightCurb.position.set(GAME_CONFIG.roadWidth/2 + 0.5, 0, -i * 4);
+                scene.add(rightCurb);
+                roadMarkings.push(rightCurb);
+            }
+
+            for(let i=0; i<60; i++) {
+                const stripeGeo = new THREE.PlaneGeometry(0.8, 8);
+                const stripeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                stripe.rotation.x = -Math.PI / 2;
+                stripe.position.y = 0.02;
+                stripe.position.z = -i * 20;
+                scene.add(stripe);
+                roadMarkings.push(stripe);
+            }
+        }
+
+        function createPlayerCar() {
+            playerCar = new THREE.Group();
+
+            const chassisGeo = new THREE.BoxGeometry(1.8, 0.5, 3.2);
+            const chassisMat = new THREE.MeshPhongMaterial({ color: GAME_CONFIG.colors.car, shininess: 80 });
+            const chassis = new THREE.Mesh(chassisGeo, chassisMat);
+            chassis.position.y = 0.5;
+            chassis.castShadow = true;
+            playerCar.add(chassis);
+
+            const noseGeo = new THREE.BoxGeometry(1.4, 0.4, 1.0);
+            const nose = new THREE.Mesh(noseGeo, chassisMat);
+            nose.position.set(0, 0.4, -2);
+            nose.castShadow = true;
+            playerCar.add(nose);
+
+            const spoilerWingGeo = new THREE.BoxGeometry(2.5, 0.1, 0.5);
+            const spoilerWing = new THREE.Mesh(spoilerWingGeo, new THREE.MeshPhongMaterial({color: 0x333333}));
+            spoilerWing.position.set(0, 1.2, 1.4);
+            playerCar.add(spoilerWing);
+
+            const spoilerPostGeo = new THREE.BoxGeometry(0.1, 0.5, 0.1);
+            const postL = new THREE.Mesh(spoilerPostGeo, new THREE.MeshPhongMaterial({color: 0x333333}));
+            postL.position.set(-0.8, 0.9, 1.4);
+            playerCar.add(postL);
+            const postR = postL.clone();
+            postR.position.set(0.8, 0.9, 1.4);
+            playerCar.add(postR);
+
+            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xffccaa });
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.set(0, 1.2, -0.2);
+            playerCar.add(head);
+
+            const capGeo = new THREE.SphereGeometry(0.41, 16, 16, 0, Math.PI * 2, 0, Math.PI/2);
+            const capMat = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+            const cap = new THREE.Mesh(capGeo, capMat);
+            cap.position.set(0, 1.2, -0.2);
+            cap.rotation.x = -0.2;
+            playerCar.add(cap);
+
+            const billGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16, 1, false, 0, Math.PI);
+            const bill = new THREE.Mesh(billGeo, capMat);
+            bill.position.set(0, 1.35, -0.5);
+            bill.rotation.x = 0.2;
+            bill.scale.z = 0.5;
+            playerCar.add(bill);
+
+            const tireGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 24);
+            const tireMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+            const rimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.41, 16);
+            const rimMat = new THREE.MeshPhongMaterial({ color: 0xFFD700 });
+
+            const wheelPos = [
+                { x: -1.1, z: 1.0 }, { x: 1.1, z: 1.0 },
+                { x: -1.1, z: -1.2 }, { x: 1.1, z: -1.2 }
+            ];
+
+            wheelPos.forEach(pos => {
+                const wheelGroup = new THREE.Group();
+                const tire = new THREE.Mesh(tireGeo, tireMat);
+                tire.rotation.z = Math.PI / 2;
+                const rim = new THREE.Mesh(rimGeo, rimMat);
+                rim.rotation.z = Math.PI / 2;
+                
+                wheelGroup.add(tire);
+                wheelGroup.add(rim);
+                wheelGroup.position.set(pos.x, 0.45, pos.z);
+                playerCar.add(wheelGroup);
+            });
+
+            scene.add(playerCar);
+        }
+
+        // --- OBSTAKELS & DECORATIE ---
+
+        function createRamp() {
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 0);
+            shape.lineTo(0, 2.0); // Iets hoger
+            shape.lineTo(8, 0); // Iets langer
+            shape.lineTo(0, 0);
+
+            const extrudeSettings = {
+                steps: 1,
+                depth: 4.0, 
+                bevelEnabled: false
+            };
+
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: GAME_CONFIG.colors.ramp, 
+                shininess: 100,
+                emissive: 0xaa00aa,
+                emissiveIntensity: 0.5
+            });
+            const ramp = new THREE.Mesh(geometry, material);
+            
+            ramp.rotation.y = -Math.PI / 2;
+            ramp.position.x = 2.0; 
+            ramp.userData = { type: 'ramp' };
+            return ramp;
+        }
+
+        function createGoomba() {
+            const goombaGroup = new THREE.Group();
+            
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.6, 0.6, 16);
+            const brownMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+            const body = new THREE.Mesh(bodyGeo, brownMat);
+            body.position.y = 0.3;
+            goombaGroup.add(body);
+
+            const headGeo = new THREE.SphereGeometry(0.7, 16, 16);
+            headGeo.scale(1, 0.8, 1);
+            const head = new THREE.Mesh(headGeo, brownMat);
+            head.position.y = 0.8;
+            goombaGroup.add(head);
+
+            const footGeo = new THREE.SphereGeometry(0.25, 16, 16);
+            const blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            
+            const leftFoot = new THREE.Mesh(footGeo, blackMat);
+            leftFoot.position.set(-0.3, 0.15, 0.2);
+            leftFoot.scale.z = 1.5;
+            goombaGroup.add(leftFoot);
+
+            const rightFoot = new THREE.Mesh(footGeo, blackMat);
+            rightFoot.position.set(0.3, 0.15, 0.2);
+            rightFoot.scale.z = 1.5;
+            goombaGroup.add(rightFoot);
+
+            const eyeGeo = new THREE.SphereGeometry(0.18, 16, 16);
+            const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            
+            const leftEye = new THREE.Mesh(eyeGeo, whiteMat);
+            leftEye.position.set(-0.2, 0.9, 0.55);
+            goombaGroup.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeo, whiteMat);
+            rightEye.position.set(0.2, 0.9, 0.55);
+            goombaGroup.add(rightEye);
+
+            const pupilGeo = new THREE.SphereGeometry(0.08, 8, 8);
+            const leftPupil = new THREE.Mesh(pupilGeo, blackMat);
+            leftPupil.position.set(-0.2, 0.92, 0.68);
+            goombaGroup.add(leftPupil);
+            const rightPupil = new THREE.Mesh(pupilGeo, blackMat);
+            rightPupil.position.set(0.2, 0.92, 0.68);
+            goombaGroup.add(rightPupil);
+
+            goombaGroup.castShadow = true;
+            goombaGroup.traverse(c => { if(c.isMesh) c.castShadow = true; });
+            goombaGroup.userData = { type: 'goomba', walkOffset: Math.random() * 100 };
+            return goombaGroup;
+        }
+
+        function createBanana() {
+            const group = new THREE.Group();
+            // Veel groter maken!
+            const geo = new THREE.TorusGeometry(0.5, 0.15, 8, 16, Math.PI / 1.5);
+            const mat = new THREE.MeshPhongMaterial({ 
+                color: 0xFFFF00, 
+                emissive: 0x444400, // Beetje licht geven
+                shininess: 100 
+            });
+            const banana = new THREE.Mesh(geo, mat);
+            banana.rotation.x = Math.PI / 2;
+            banana.rotation.z = -Math.PI / 4;
+            banana.position.y = 0.1;
+            group.add(banana);
+
+            const stemGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.3);
+            const stemMat = new THREE.MeshLambertMaterial({color: 0x443300});
+            const stem = new THREE.Mesh(stemGeo, stemMat);
+            stem.position.set(0, 0.1, -0.4);
+            stem.rotation.x = Math.PI/2;
+            group.add(stem);
+
+            // Grote schaal
+            group.scale.set(3, 3, 3);
+
+            group.userData = { type: 'banana', rotSpeed: Math.random() * 0.1 };
+            return group;
+        }
+
+        function spawnObstacle() {
+            const rand = Math.random();
+            let mesh;
+
+            if (rand < 0.2) {
+                // RAMP! (20% kans)
+                mesh = createRamp();
+                mesh.position.y = 0; 
+            } else if (rand < 0.5) {
+                // Pijp
+                const geometry = new THREE.CylinderGeometry(1.2, 1.2, 2.5, 16);
+                const material = new THREE.MeshPhongMaterial({ color: GAME_CONFIG.colors.pipe, shininess: 60 });
+                mesh = new THREE.Mesh(geometry, material);
+                mesh.position.y = 1.25;
+                const rim = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.6, 16), material);
+                rim.position.y = 1;
+                mesh.add(rim);
+                mesh.userData = { type: 'pipe' };
+            } else if (rand < 0.8) {
+                // Goomba
+                mesh = createGoomba();
+            } else {
+                // Banaan
+                mesh = createBanana();
+            }
+
+            mesh.position.z = -GAME_CONFIG.renderDistance;
+            
+            const safeWidth = GAME_CONFIG.roadWidth - 4;
+            mesh.position.x = (Math.random() * safeWidth) - (safeWidth/2);
+            
+            scene.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        function spawnScenery(initial = false) {
+            const type = Math.random() > 0.3 ? 'tree' : 'bush';
+            const group = new THREE.Group();
+
+            if (type === 'tree') {
+                const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 1.5, 8);
+                const trunkMat = new THREE.MeshLambertMaterial({color: 0x8B4513});
+                const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+                trunk.position.y = 0.75;
+                
+                const leavesGeo = new THREE.ConeGeometry(2, 4, 8);
+                const leavesMat = new THREE.MeshLambertMaterial({color: 0x228B22});
+                const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+                leaves.position.y = 2.5;
+                group.add(trunk);
+                group.add(leaves);
+            } else {
+                const bushGeo = new THREE.DodecahedronGeometry(1.5);
+                const bushMat = new THREE.MeshLambertMaterial({color: 0x32CD32});
+                const bush = new THREE.Mesh(bushGeo, bushMat);
+                bush.position.y = 1;
+                group.add(bush);
+            }
+
+            if (initial) {
+                group.position.z = -Math.random() * GAME_CONFIG.renderDistance;
+            } else {
+                group.position.z = -GAME_CONFIG.renderDistance;
+            }
+
+            const side = Math.random() > 0.5 ? 1 : -1;
+            const distFromRoad = (GAME_CONFIG.roadWidth / 2) + 5 + Math.random() * 40;
+            group.position.x = side * distFromRoad;
+
+            scene.add(group);
+            scenery.push(group);
+        }
+
+        function createClouds() {
+            // Geen blokken (dodecahedron) meer, maar "echte" wolken met bollen
+            for(let i=0; i<30; i++) {
+                const cloudGroup = new THREE.Group();
+                const cloudMat = new THREE.MeshLambertMaterial({ 
+                    color: 0xffffff, 
+                    transparent: true, 
+                    opacity: 0.8,
+                    flatShading: false 
+                });
+
+                // Maak een wolkje van 3-5 bollen
+                const parts = Math.floor(Math.random() * 3) + 3;
+                for(let j=0; j<parts; j++) {
+                    const size = Math.random() * 4 + 3;
+                    const geo = new THREE.SphereGeometry(size, 8, 8); // Low poly spheres zijn prima
+                    const part = new THREE.Mesh(geo, cloudMat);
+                    part.position.set(
+                        (Math.random() - 0.5) * 8,
+                        (Math.random() - 0.5) * 3,
+                        (Math.random() - 0.5) * 6
+                    );
+                    cloudGroup.add(part);
+                }
+
+                cloudGroup.position.set(
+                    (Math.random() * 800) - 400,
+                    Math.random() * 50 + 30, // Iets hoger
+                    (Math.random() * GAME_CONFIG.renderDistance) - (GAME_CONFIG.renderDistance/2)
+                );
+                
+                // Rotatie
+                cloudGroup.rotation.y = Math.random() * Math.PI;
+
+                scene.add(cloudGroup);
+            }
+        }
+
+        // --- GAME LOGICA ---
+
+        function handleKeyDown(event) {
+            const key = event.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = true;
+            if (key === 'r' && gameOver) resetGame();
+            if (!gameActive && !gameOver && key === 'w') startGame();
+        }
+
+        function handleKeyUp(event) {
+            const key = event.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = false;
+        }
+
+        function startGame() {
+            gameActive = true;
+            uiMessage.style.display = 'none';
+        }
+
+        function resetGame() {
+            gameOver = false;
+            gameActive = false;
+            score = 0;
+            speed = 0;
+            yVelocity = 0;
+            isSuperJumping = false;
+            uiJumpMsg.style.display = 'none';
+            
+            playerCar.position.set(0, 0, 0);
+            playerCar.rotation.set(0, 0, 0);
+
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+
+            uiMessage.style.display = 'block';
+            uiMainText.innerHTML = "Druk op 'W' om te racen!";
+            updateUI();
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOver = true;
+            isSuperJumping = false;
+            uiJumpMsg.style.display = 'none';
+            uiMessage.style.display = 'block';
+            uiMainText.innerHTML = `CRASH!<br>Score: ${Math.floor(score)}<br><span style="font-size:16px">Druk op 'R' om opnieuw te proberen</span>`;
+        }
+
+        function updateUI() {
+            uiScore.innerText = `SCORE: ${Math.floor(score)}`;
+            uiSpeed.innerText = `${Math.floor(speed * 10)} KM/U`;
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Snelheid & Input
+            if (gameActive) {
+                if (keys.w) speed += GAME_CONFIG.acceleration * 0.05;
+                else speed -= GAME_CONFIG.deceleration * 0.02;
+            } else {
+                speed *= 0.95;
+            }
+            if (keys.s && speed > 0) speed -= GAME_CONFIG.deceleration * 0.1;
+            speed = Math.max(0, Math.min(speed, GAME_CONFIG.maxSpeed / 10));
+
+            // Sturen
+            if (speed > 0.1) {
+                const airHandling = (playerCar.position.y > BASE_Y + 0.1) ? 0.6 : 1.0; 
+                if (keys.a) {
+                    playerCar.position.x -= GAME_CONFIG.turnSpeed * airHandling;
+                    playerCar.rotation.y = 0.25; 
+                    playerCar.rotation.z = 0.08; 
+                } else if (keys.d) {
+                    playerCar.position.x += GAME_CONFIG.turnSpeed * airHandling;
+                    playerCar.rotation.y = -0.25;
+                    playerCar.rotation.z = -0.08;
+                } else {
+                    playerCar.rotation.y *= 0.85;
+                    playerCar.rotation.z *= 0.85;
+                }
+            }
+
+            // --- FYSICA & SUPER JUMP ---
+            
+            if (isSuperJumping) {
+                // We vliegen!
+                jumpTimer--;
+                
+                // Houd de hoogte vast of zweef langzaam
+                if (playerCar.position.y < 12) { // Plafond hoogte
+                     yVelocity = 0.1; // Beetje omhoog blijven duwen
+                } else {
+                    yVelocity = 0; // Stabiel
+                }
+                
+                // Beetje wiebelen voor effect
+                playerCar.position.y += Math.sin(Date.now() * 0.005) * 0.05;
+                playerCar.position.y += yVelocity;
+
+                // Extra punten tijdens vliegen
+                score += 1; 
+
+                if (jumpTimer <= 0) {
+                    isSuperJumping = false;
+                    uiJumpMsg.style.display = 'none';
+                }
+            } else {
+                // Normale zwaartekracht
+                if (playerCar.position.y > BASE_Y) {
+                    yVelocity -= GRAVITY;
+                    playerCar.position.y += yVelocity;
+                } else {
+                    playerCar.position.y = BASE_Y;
+                    yVelocity = 0;
+                    if (speed > 0) {
+                        playerCar.position.y = BASE_Y + Math.sin(Date.now() * 0.02) * 0.03;
+                    }
+                }
+            }
+
+            // Weggrenzen
+            const limit = (GAME_CONFIG.roadWidth / 2) - 1.5;
+            playerCar.position.x = Math.max(-limit, Math.min(limit, playerCar.position.x));
+
+            // Camera volgt
+            camera.position.x += (playerCar.position.x * 0.5 - camera.position.x) * 0.1;
+            camera.position.y += ((5 + playerCar.position.y * 0.6) - camera.position.y) * 0.1; // Camera gaat mee omhoog
+
+            distanceTraveled += speed;
+            score += speed * 0.1;
+
+            // Animatie Wegmarkeringen
+            roadMarkings.forEach((obj) => {
+                obj.position.z += speed;
+                const isCurb = obj.geometry.type === 'BoxGeometry';
+                if (obj.position.z > 20) {
+                    if (isCurb) obj.position.z -= 480; 
+                    else obj.position.z -= 1200; 
+                }
+            });
+
+            // Animatie Scenery
+            scenery.forEach((obj, idx) => {
+                obj.position.z += speed;
+                if(obj.position.z > 20) {
+                    scene.remove(obj);
+                    scenery.splice(idx, 1);
+                    spawnScenery(); 
+                }
+            });
+
+            // Obstakel Spawning
+            if (gameActive && Math.random() < 0.02 + (speed * 0.0005)) { 
+                if (obstacles.length === 0 || obstacles[obstacles.length-1].position.z > - (GAME_CONFIG.renderDistance - 50)) {
+                    spawnObstacle();
+                }
+            }
+
+            // Obstakel Logic
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.position.z += speed;
+
+                if (obs.userData.type === 'goomba') {
+                    obs.rotation.z = Math.sin((Date.now() / 100) + obs.userData.walkOffset) * 0.2;
+                    obs.position.x += Math.sin((Date.now() / 500) + obs.userData.walkOffset) * 0.02;
+                } else if (obs.userData.type === 'banana') {
+                    obs.rotation.y += 0.05;
+                }
+
+                // Interactie Detectie
+                // We gebruiken nu een grotere marge voor hoge snelheden
+                // We checken of het object in de buurt is van de auto op de Z-as
+                const zDist = obs.position.z;
+                // De "Hit Zone" is ruimer als we sneller gaan om 'clipping' te voorkomen
+                const hitZone = Math.max(2.5, speed * 1.5); 
+
+                if (zDist > -hitZone && zDist < hitZone) {
+                    
+                    if (obs.userData.type === 'ramp') {
+                        // Ramp detectie
+                        if (Math.abs(obs.position.x - playerCar.position.x) < 3.0) {
+                             if (!isSuperJumping) {
+                                 isSuperJumping = true;
+                                 jumpTimer = JUMP_DURATION;
+                                 yVelocity = 1.2; // Start boost
+                                 uiJumpMsg.style.display = 'block';
+                             }
+                        }
+                    } 
+                    else {
+                        // Normale botsing
+                        const hitDist = (obs.userData.type === 'banana') ? 2.5 : 2.0; // Bananen zijn groter
+                        
+                        if (Math.abs(obs.position.x - playerCar.position.x) < hitDist) {
+                            // VEILIGHEIDSCHECK: Vlieg je?
+                            // Als je super jumpt (timer > 0) of gewoon hoog bent (> 2.0), ben je veilig
+                            if (playerCar.position.y < 2.0 && !isSuperJumping) {
+                                endGame();
+                            } else {
+                                // Als we vliegen en het is GEEN ramp, krijgen we punten
+                                if (obs.userData.type !== 'ramp') score += 50;
+                            }
+                        }
+                    }
+                }
+
+                if (obs.position.z > 20) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            if (speed > 0 && playerCar.position.y <= BASE_Y + 0.1) {
+                playerCar.children.forEach(child => {
+                    if (child.type === 'Group') {
+                        child.children[0].rotation.x += speed * 0.5;
+                        child.children[1].rotation.x += speed * 0.5;
+                    }
+                });
+            }
+
+            updateUI();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
