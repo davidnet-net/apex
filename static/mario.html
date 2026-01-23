@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Mario - Multiplayer Pro</title>
+    <title>3D Mario - Full Multiplayer & Buildings Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #5c94fc; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #stats-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; z-index: 10; pointer-events: none; }
         .stat-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); padding: 8px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); }
-        .heart-icon { color: #ff4444; } .star-icon { color: #ffd700; } .score-icon { color: #4caf50; }
         #settings-btn { position: absolute; top: 20px; left: 20px; cursor: pointer; font-size: 24px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; z-index: 11; border: 1px solid rgba(255,255,255,0.1); }
         #settings-menu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 40, 0.95); color: white; padding: 30px; border-radius: 15px; border: 2px solid #5c94fc; z-index: 100; width: 300px; text-align: center; }
         .setting-row { margin-bottom: 20px; text-align: left; }
         input[type=text], input[type=range] { width: 100%; box-sizing: border-box; }
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 20px; text-align: center; display: none; border: 4px solid gold; z-index: 100; }
         button.menu-btn { background: linear-gradient(to bottom, #f8b800, #d49000); border: none; padding: 12px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin-top: 20px; }
-        #instructions { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 25px; border-radius: 30px; font-size: 14px; }
+        #checkpoint-msg { display: none; color: #00ff00; font-size: 24px; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); text-shadow: 2px 2px 0px #000; z-index: 20; }
     </style>
 </head>
 <body>
@@ -31,19 +30,19 @@
 
     <div id="settings-menu">
         <h2 style="color: gold;">Instellingen</h2>
-        <div class="setting-row"><label>Naam</label><input type="text" id="opt-name" placeholder="Mario" onchange="updateSettingsUI()"></div>
+        <div class="setting-row"><label>Spelernaam</label><input type="text" id="opt-name" placeholder="Mario" onchange="updateSettingsUI()"></div>
         <div class="setting-row"><label>Level Lengte <span id="val-len" style="float:right">8</span></label><input type="range" id="opt-length" min="4" max="20" value="8" oninput="updateSettingsUI()"></div>
         <button class="menu-btn" onclick="closeSettings()">Opslaan</button>
     </div>
 
     <div id="game-over"><h1 id="status-text">GAME OVER</h1><button class="menu-btn" onclick="restartGame(true)">Nieuw Spel Starten</button></div>
-    <div id="instructions">WASD: Lopen | Spatie: Springen | F: Vuurbal</div>
+    <div id="checkpoint-msg">CHECKPOINT!</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         /**
-         * MultiplayerManager: Handelt communicatie en seeded generation af.
+         * Beheert multiplayer synchronisatie en seeded RNG.
          */
         class MultiplayerManager {
             constructor(scene) {
@@ -52,10 +51,8 @@
                 this.name = "Mario";
                 this.ghosts = new Map();
                 this.currentSeed = null;
-                this.hasInitialSeed = false;
             }
 
-            // Seeded random helper
             seededRandom(seed) {
                 let s = seed;
                 return () => {
@@ -76,7 +73,6 @@
                     });
                     const data = await res.json();
                     
-                    // Update UI en check voor level change
                     lives = data.gameState.sharedLives;
                     score = data.gameState.sharedScore;
                     starsCollected = data.gameState.sharedStars;
@@ -86,15 +82,19 @@
 
                     if (this.currentSeed !== data.gameState.levelSeed) {
                         this.currentSeed = data.gameState.levelSeed;
-                        this.hasInitialSeed = true;
                         generateLevel(); 
                         if (isGameOver) restartGame(false); 
                     }
 
                     if (lives <= 0 && !isGameOver) endGame(false);
-
                     this.updateGhosts(data.players);
-                } catch(e) {}
+                } catch(e) {
+                    // Als server offline is, genereer een lokale map
+                    if (this.currentSeed === null) {
+                        this.currentSeed = 12345;
+                        generateLevel();
+                    }
+                }
             }
 
             updateGhosts(players) {
@@ -120,10 +120,11 @@
             }
         }
 
-        // --- GAME ENGINE ---
+        // --- GLOBALE VARIABELEN ---
         let gameConfig = { levelLength: 8, sensitivity: 0.002, maxFPS: 60 };
         let scene, camera, renderer, player, clock, mp;
-        let platforms = [], movingPlatforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], projectiles = [], powerups = [], checkpoints = [];
+        let platforms = [], stars = [], goombas = [], thwomps = [], bulletBills = [], bullets = [], projectiles = [], powerups = [], checkpoints = [];
+        let flag = null; // FIX: Nu gedefinieerd
         let isGameOver = false, isPaused = false, lives = 3, score = 0, starsCollected = 0, totalStarsInLevel = 0;
         let isBig = false, hasFirePower = false, isImmune = false;
         let velocityX = 0, velocityY = 0, velocityZ = 0, jumpCount = 0;
@@ -139,6 +140,8 @@
             textures['brick'] = new THREE.CanvasTexture(canvas);
             ctx.fillStyle = '#757575'; ctx.fillRect(0,0,128,128);
             textures['stone'] = new THREE.CanvasTexture(canvas);
+            ctx.fillStyle = '#6d4c41'; ctx.fillRect(0,0,128,128);
+            textures['wood'] = new THREE.CanvasTexture(canvas);
             ctx.fillStyle = '#ffd700'; ctx.fillRect(0,0,128,128);
             textures['gold'] = new THREE.CanvasTexture(canvas);
         }
@@ -155,11 +158,10 @@
             const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(50,100,50); dl.castShadow = true; scene.add(dl);
 
             createPlayer();
-            window.addEventListener('keydown', e => { 
-                keys[e.code] = true; 
-                if(e.code === 'Space' && jumpCount < 2) { velocityY = 0.4; jumpCount++; }
-                if(e.code === 'KeyF' && hasFirePower) shootFireball();
-            });
+            // Start platform om vallen te voorkomen
+            createPlatform(0, -1, 0, 10, 1, 10, 'grass');
+
+            window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code === 'Space' && jumpCount < 2) { velocityY = 0.4; jumpCount++; } });
             window.addEventListener('keyup', e => keys[e.code] = false);
             window.addEventListener('mousemove', e => {
                 if(document.pointerLockElement === renderer.domElement) {
@@ -171,12 +173,9 @@
             animate();
         }
 
-        // --- GENERATOR ---
+        // --- LEVEL GENERATOR ---
         function generateLevel() {
-            if(!mp.hasInitialSeed) return;
-            const rng = mp.seededRandom(mp.currentSeed);
-            
-            // Clean
+            const rng = mp.seededRandom(mp.currentSeed || 12345);
             platforms.forEach(p => scene.remove(p.mesh)); platforms = [];
             stars.forEach(s => scene.remove(s)); stars = []; totalStarsInLevel = 0;
             goombas.forEach(g => scene.remove(g.mesh)); goombas = [];
@@ -185,7 +184,6 @@
             checkpoints.forEach(c => scene.remove(c.mesh)); checkpoints = [];
             if(flag) scene.remove(flag);
 
-            // Start
             createPlatform(0, 0, 0, 8, 1, 8, 'grass');
             let cx = 0, cy = 0, cz = 0, ang = -Math.PI;
 
@@ -199,20 +197,48 @@
                     if(rng() < 0.2) addStar(cx, cy+1.5, cz);
                 }
                 const bType = bTypes[Math.floor(rng() * bTypes.length)];
-                let bx = cx+Math.sin(ang)*8, bz = cz+Math.cos(ang)*8;
+                let bx = cx+Math.sin(ang)*10, bz = cz+Math.cos(ang)*10;
                 
-                // Simpele gebouw representatie voor multiplayer stabiliteit
-                createPlatform(bx, cy, bz, 10, 1, 10, 'stone');
-                if(bType === 'skyFortress' || bType === 'castle') createThwomp(bx, cy+10, bz);
-                if(bType === 'clockTower') createBulletBill(bx, cy+2, bz, ang);
-                
-                createCheckpoint(bx, cy, bz);
-                cx = bx; cz = bz;
+                let exit;
+                switch(bType) {
+                    case 'skyFortress': exit = createSkyFortress(bx, cy, bz); break;
+                    case 'clockTower': exit = createClockTower(bx, cy, bz); break;
+                    case 'twinTowers': exit = createTwinTowers(bx, cy, bz); break;
+                    case 'colosseum': exit = createColosseum(bx, cy, bz); break;
+                    case 'lighthouse': exit = createLighthouse(bx, cy, bz); break;
+                    case 'windmill': exit = createWindmill(bx, cy, bz); break;
+                    case 'greenhouse': exit = createGreenhouse(bx, cy, bz); break;
+                    case 'well': exit = createWell(bx, cy, bz); break;
+                    case 'shrine': exit = createShrine(bx, cy, bz); break;
+                    case 'gazebo': exit = createGazebo(bx, cy, bz); break;
+                    case 'ruins': exit = createFloatingRuins(bx, cy, bz, rng); break;
+                    case 'spiral': exit = createSpiralStaircase(bx, cy, bz); break;
+                    case 'tower': exit = createBuildingTower(bx, cy, bz); break;
+                    case 'castle': exit = createBuildingCastle(bx, cy, bz); break;
+                }
+                createCheckpoint(exit.x, exit.y, exit.z);
+                cx = exit.x; cy = exit.y; cz = exit.z;
             }
             createPlatform(cx+10, cy, cz, 6, 1, 6, 'gold');
             createFlag(cx+10, cy+0.5, cz);
             document.getElementById('total-stars').innerText = totalStarsInLevel;
         }
+
+        // --- GEBOUW DEFINITIES ---
+        function createSkyFortress(x, y, z) { createPlatform(x, y, z, 20, 2, 20, 'stone'); createPlatform(x, y+5, z, 10, 8, 10, 'brick'); return { x, y: y+9, z: z+12 }; }
+        function createClockTower(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'brick'); createPlatform(x, y+10, z, 4, 20, 4, 'brick'); return { x, y, z: z+6 }; }
+        function createTwinTowers(x, y, z) { createPlatform(x-5, y+6, z, 4, 12, 4, 'stone'); createPlatform(x+5, y+6, z, 4, 12, 4, 'stone'); return { x, y: y+10, z }; }
+        function createColosseum(x, y, z) { createPlatform(x, y, z, 16, 1, 16, 'stone'); return { x, y, z: z+9 }; }
+        function createLighthouse(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'stone'); createPlatform(x, y+11, z, 3, 1, 3, 'gold'); return { x, y, z: z+5 }; }
+        function createWindmill(x, y, z) { createPlatform(x, y, z, 6, 1, 6, 'grass'); return { x, y, z: z+5 }; }
+        function createGreenhouse(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'grass'); return { x, y, z: z+6 }; }
+        function createWell(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return { x, y, z: z+4 }; }
+        function createShrine(x, y, z) { createPlatform(x, y, z, 5, 1, 5, 'stone'); return { x, y, z: z+4 }; }
+        function createGazebo(x, y, z) { createPlatform(x, y, z, 5, 0.5, 5, 'wood'); return { x, y, z: z+4 }; }
+        function createFloatingRuins(x, y, z, rng) { for(let i=0; i<10; i++) createPlatform(x+rng()*10-5, y+rng()*5, z+rng()*10-5, 3, 1, 3, 'stone'); return { x, y, z: z+8 }; }
+        function createSpiralStaircase(x, y, z) { createPlatform(x, y, z, 8, 1, 8, 'stone'); return { x, y, z }; }
+        function createBuildingTower(x, y, z) { createPlatform(x, y, z, 14, 1, 14, 'stone'); return { x, y: y+10, z }; }
+        function createBuildingCastle(x, y, z) { createPlatform(x, y, z, 10, 1, 16, 'stone'); return { x, y, z: z+9 }; }
 
         function createPlatform(x, y, z, w, h, d, tex) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({map: textures[tex] || null, color: textures[tex]?0xffffff:0x888888}));
@@ -220,74 +246,40 @@
             scene.add(mesh); platforms.push({mesh, w, h, d});
         }
 
+        function createFlag(x, y, z) {
+            flag = new THREE.Group();
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+            p.position.y = 2; flag.add(p);
+            const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.1), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+            s.position.set(0.75, 3.5, 0); flag.add(s);
+            flag.position.set(x, y, z); scene.add(flag);
+        }
+
         function addStar(x, y, z) {
-            const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({color: 0xffd700, emissive: 0xaa6600}));
-            s.position.set(x,y,z); scene.add(s); stars.push(s); totalStarsInLevel++;
-        }
-
-        function createThwomp(x, y, z) {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x555555}));
-            m.position.set(x,y,z); scene.add(m); thwomps.push({mesh: m, homeY: y, state: 'IDLE', timer: 0});
-        }
-
-        function createBulletBill(x, y, z, ang) {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({color: 0x111111}));
-            m.position.set(x,y,z); scene.add(m); bulletBills.push({mesh: m, ang});
+            const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
+            s.position.set(x, y, z); scene.add(s); stars.push(s); totalStarsInLevel++;
         }
 
         function createCheckpoint(x, y, z) {
             const g = new THREE.Group();
-            g.add(new THREE.Mesh(new THREE.BoxGeometry(0.5,2,0.5), new THREE.MeshStandardMaterial({color: 0x888888})));
-            g.position.set(x,y,z); scene.add(g);
-            checkpoints.push({mesh: g, active: false, pos: {x, y: y+1, z}});
+            g.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 2, 0.5), new THREE.MeshStandardMaterial({ color: 0x888888 })));
+            g.position.set(x, y, z); scene.add(g);
+            checkpoints.push({ mesh: g, active: false, pos: { x, y: y + 1, z } });
         }
 
-        function createFlag(x, y, z) {
-            flag = new THREE.Group();
-            flag.add(new THREE.Mesh(new THREE.BoxGeometry(0.2,4,0.2), new THREE.MeshStandardMaterial({color: 0x888888})));
-            flag.position.set(x,y,z); scene.add(flag);
-        }
+        function createPlayer() { player = new THREE.Group(); player.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }))); player.position.set(0, 10, 0); scene.add(player); }
 
-        function createPlayer() {
-            player = new THREE.Group();
-            player.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000})));
-            player.position.set(0, 10, 0); scene.add(player);
-        }
-
-        function restartGame(full) {
-            if(full) mp.report('restart');
-            player.position.set(0, 10, 0);
-            velocityX = 0; velocityY = 0; velocityZ = 0;
-            isGameOver = false; document.getElementById('game-over').style.display = 'none';
-        }
-
-        function endGame(win) {
-            isGameOver = true; document.exitPointerLock();
-            document.getElementById('game-over').style.display = 'block';
-            document.getElementById('status-text').innerText = win ? "GEWONNEN!" : "GAME OVER";
-            if(win) mp.report('finish');
-        }
-
-        function shootFireball() {
-            const f = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshStandardMaterial({color: 0xff4400}));
-            const dx = Math.sin(player.rotation.y), dz = Math.cos(player.rotation.y);
-            f.position.set(player.position.x + dx, player.position.y, player.position.z + dz);
-            f.userData = { vx: dx*0.5, vz: dz*0.5, life: 60 };
-            scene.add(f); projectiles.push(f);
-        }
+        function restartGame(full) { if(full) mp.report('restart'); player.position.set(0, 10, 0); velocityX = 0; velocityY = 0; velocityZ = 0; isGameOver = false; document.getElementById('game-over').style.display = 'none'; }
+        function endGame(win) { isGameOver = true; document.exitPointerLock(); document.getElementById('game-over').style.display = 'block'; document.getElementById('status-text').innerText = win ? "GEWONNEN!" : "GAME OVER"; if(win) mp.report('finish'); }
 
         function animate() {
             requestAnimationFrame(animate);
             if(isPaused) return;
-            
             mp.sync();
-
             if(isGameOver) { renderer.render(scene, camera); return; }
 
-            // Movement
             let ix = 0, iz = 0;
-            if(keys['KeyW']) iz += 1; if(keys['KeyS']) iz -= 1;
-            if(keys['KeyA']) ix += 1; if(keys['KeyD']) ix -= 1;
+            if(keys['KeyW']) iz += 1; if(keys['KeyS']) iz -= 1; if(keys['KeyA']) ix += 1; if(keys['KeyD']) ix -= 1;
             if(ix !== 0 || iz !== 0) {
                 const dx = (Math.cos(targetRotationY)*ix + Math.sin(targetRotationY)*iz);
                 const dz = (-Math.sin(targetRotationY)*ix + Math.cos(targetRotationY)*iz);
@@ -298,45 +290,27 @@
             player.position.x += velocityX; player.position.z += velocityZ;
             velocityY -= 0.015; player.position.y += velocityY;
 
-            // Collisions
             platforms.forEach(p => {
                 const hw = p.w/2+0.4, hd = p.d/2+0.4;
                 if(Math.abs(player.position.x - p.mesh.position.x) < hw && Math.abs(player.position.z - p.mesh.position.z) < hd) {
                     const top = p.mesh.position.y + p.h/2;
-                    if(velocityY <= 0 && player.position.y - 0.5 >= top - 0.5 && player.position.y - 0.5 + velocityY <= top + 0.1) {
-                        player.position.y = top + 0.5; velocityY = 0; jumpCount = 0;
-                    }
+                    if(velocityY <= 0 && player.position.y - 0.5 >= top - 0.5 && player.position.y - 0.5 + velocityY <= top + 0.1) { player.position.y = top + 0.5; velocityY = 0; jumpCount = 0; }
                 }
             });
 
-            // Stars
-            stars.forEach((s,i) => {
-                s.rotation.y += 0.05;
-                if(player.position.distanceTo(s.position) < 1.2) { scene.remove(s); stars.splice(i,1); mp.report('score', {amount: 100, isStar: true}); }
-            });
-
+            checkpoints.forEach(cp => { if(!cp.active && player.position.distanceTo(cp.mesh.position) < 2) { cp.active = true; document.getElementById('checkpoint-msg').style.display = 'block'; setTimeout(()=>document.getElementById('checkpoint-msg').style.display='none',2000); } });
             if(flag && player.position.distanceTo(flag.position) < 2) endGame(true);
             if(player.position.y < -30) { mp.report('death'); restartGame(false); }
 
-            // Camera
             const d = 10;
-            camera.position.lerp(new THREE.Vector3(
-                player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*d,
-                player.position.y + Math.sin(targetRotationX)*d + 2,
-                player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*d
-            ), 0.1);
-            camera.lookAt(player.position.x, player.position.y+1, player.position.z);
-
+            camera.position.lerp(new THREE.Vector3(player.position.x - Math.sin(targetRotationY)*Math.cos(targetRotationX)*d, player.position.y + Math.sin(targetRotationX)*d + 2, player.position.z - Math.cos(targetRotationY)*Math.cos(targetRotationX)*d), 0.1);
+            camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
             renderer.render(scene, camera);
         }
 
         function openSettings() { isPaused = true; document.getElementById('settings-menu').style.display = 'block'; document.exitPointerLock(); }
         function closeSettings() { isPaused = false; document.getElementById('settings-menu').style.display = 'none'; renderer.domElement.requestPointerLock(); }
-        function updateSettingsUI() {
-            document.getElementById('val-len').innerText = document.getElementById('opt-length').value;
-            gameConfig.levelLength = parseInt(document.getElementById('opt-length').value);
-            mp.name = document.getElementById('opt-name').value || "Mario";
-        }
+        function updateSettingsUI() { document.getElementById('val-len').innerText = document.getElementById('opt-length').value; gameConfig.levelLength = parseInt(document.getElementById('opt-length').value); mp.name = document.getElementById('opt-name').value || "Mario"; }
 
         window.onload = init;
     </script>
