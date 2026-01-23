@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Space Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            overflow: hidden; /* Voorkom scrollbalken */
+            font-family: 'Courier New', Courier, monospace;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            border: 2px solid #333;
+        }
+
+        canvas {
+            display: block;
+            background-color: #111;
+        }
+
+        #uiLayer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            pointer-events: none; /* Zodat klikken door de tekst heen gaan */
+            text-shadow: 0 0 5px #fff;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none; /* Standaard verborgen */
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border: 2px solid #ff0055;
+            border-radius: 10px;
+        }
+
+        h1 { margin: 0 0 10px 0; color: #ff0055; text-transform: uppercase; }
+        p { margin: 10px 0; }
+        .btn-info { font-size: 14px; color: #aaa; margin-top: 20px; }
+        
+        /* Knipperend effect voor start tekst */
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="uiLayer">Score: <span id="scoreEl">0</span></div>
+        
+        <div id="gameOverScreen">
+            <h1>Game Over</h1>
+            <p>Eindscore: <span id="finalScore">0</span></p>
+            <p class="blink">Druk op SPATIE om opnieuw te spelen</p>
+        </div>
+    </div>
+
+    <script>
+        // --- INSTELLINGEN & VARIABELEN ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreEl');
+        const finalScoreEl = document.getElementById('finalScore');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        let score = 0;
+        let gameActive = true;
+        let animationId;
+        let frames = 0;
+
+        // Speler object
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 60,
+            width: 40,
+            height: 40,
+            speed: 7,
+            color: '#00ffcc',
+            dx: 0
+        };
+
+        // Arrays voor game objecten
+        let projectiles = [];
+        let enemies = [];
+        let particles = [];
+
+        // Toetsenbord status
+        const keys = {
+            ArrowRight: false,
+            ArrowLeft: false,
+            Space: false
+        };
+
+        // --- EVENT LISTENERS ---
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowRight') keys.ArrowRight = true;
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+            
+            // Schieten met Spatie
+            if (e.code === 'Space') {
+                if (gameActive) {
+                    // Voorkom 'spammen' van kogels door checken op laatste schot of gewoon enkel schot
+                    // Voor nu: enkel schot per druk (of pas aan voor auto-fire)
+                    shoot();
+                } else {
+                    restartGame();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowRight') keys.ArrowRight = false;
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+        });
+
+        // --- KLASSEN ---
+
+        class Projectile {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 4;
+                this.speed = 10;
+                this.color = '#ffff00';
+            }
+            update() {
+                this.y -= this.speed;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        class Enemy {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 40;
+                this.height = 40;
+                this.speed = 3 + Math.random() * 2; // Willekeurige snelheid
+                this.color = '#ff0055';
+            }
+            update() {
+                this.y += this.speed;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Teken een simpel "oog"
+                ctx.fillStyle = 'black';
+                ctx.fillRect(this.x + 10, this.y + 10, 20, 10);
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = Math.random() * 3 + 1;
+                this.speed = {
+                    x: (Math.random() - 0.5) * 6,
+                    y: (Math.random() - 0.5) * 6
+                };
+                this.alpha = 1;
+                this.color = color;
+            }
+            update() {
+                this.x += this.speed.x;
+                this.y += this.speed.y;
+                this.alpha -= 0.02; // Fade out effect
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- GAME FUNCTIES ---
+
+        function shoot() {
+            // Voeg kogel toe vanuit het midden van de speler
+            projectiles.push(new Projectile(player.x + player.width / 2, player.y));
+        }
+
+        function spawnEnemies() {
+            // Elke 60 frames (ongeveer 1 sec) een nieuwe vijand
+            if (frames % 60 === 0) {
+                const x = Math.random() * (canvas.width - 40);
+                enemies.push(new Enemy(x, -40)); // Start net buiten beeld
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function restartGame() {
+            // Reset alles
+            projectiles = [];
+            enemies = [];
+            particles = [];
+            score = 0;
+            frames = 0;
+            scoreEl.innerText = score;
+            gameActive = true;
+            gameOverScreen.style.display = 'none';
+            player.x = canvas.width / 2 - 20;
+            animate();
+        }
+
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            finalScoreEl.innerText = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        // --- GAME LOOP ---
+
+        function animate() {
+            if (!gameActive) return;
+
+            animationId = requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; // Trail effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 1. Speler Logica
+            if (keys.ArrowRight && player.x + player.width < canvas.width) {
+                player.x += player.speed;
+            }
+            if (keys.ArrowLeft && player.x > 0) {
+                player.x -= player.speed;
+            }
+
+            // Teken Speler (Driehoek)
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width / 2, player.y);
+            ctx.lineTo(player.x, player.y + player.height);
+            ctx.lineTo(player.x + player.width, player.y + player.height);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            ctx.closePath();
+
+            // 2. Projectielen
+            projectiles.forEach((projectile, index) => {
+                projectile.update();
+                projectile.draw();
+
+                // Verwijder als ze buiten beeld zijn
+                if (projectile.y + projectile.radius < 0) {
+                    setTimeout(() => {
+                        projectiles.splice(index, 1);
+                    }, 0);
+                }
+            });
+
+            // 3. Vijanden
+            enemies.forEach((enemy, index) => {
+                enemy.update();
+                enemy.draw();
+
+                // Speler geraakt? (Game Over)
+                const distX = Math.abs((player.x + player.width/2) - (enemy.x + enemy.width/2));
+                const distY = Math.abs((player.y + player.height/2) - (enemy.y + enemy.height/2));
+
+                if (distX < (player.width/2 + enemy.width/2) && distY < (player.height/2 + enemy.height/2)) {
+                    createExplosion(player.x + player.width/2, player.y + player.height/2, player.color);
+                    endGame();
+                }
+
+                // Vijand buiten beeld? (Verwijder en minpunt optioneel, hier gewoon weg)
+                if (enemy.y > canvas.height) {
+                    setTimeout(() => {
+                        enemies.splice(index, 1);
+                    }, 0);
+                }
+
+                // Kogel raakt vijand?
+                projectiles.forEach((projectile, pIndex) => {
+                    const pDistX = Math.abs(projectile.x - (enemy.x + enemy.width/2));
+                    const pDistY = Math.abs(projectile.y - (enemy.y + enemy.height/2));
+
+                    if (pDistX < (projectile.radius + enemy.width/2) && pDistY < (projectile.radius + enemy.height/2)) {
+                        // HIT!
+                        createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.color);
+                        score += 100;
+                        scoreEl.innerText = score;
+                        
+                        setTimeout(() => {
+                            enemies.splice(index, 1);
+                            projectiles.splice(pIndex, 1);
+                        }, 0);
+                    }
+                });
+            });
+
+            // 4. Deeltjes (Explosies)
+            particles.forEach((particle, index) => {
+                if (particle.alpha <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    particle.update();
+                    particle.draw();
+                }
+            });
+
+            spawnEnemies();
+            frames++;
+        }
+
+        // Start de game
+        animate();
+
+    </script>
+</body>
+</html>
