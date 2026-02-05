@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stuiterende 6 en 7 - Deluxe Editie</title>
+    <title>DVD Stijl 67 - Multi Editie</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050505;
+            background-color: #000000;
             height: 100vh;
             font-family: 'Arial', sans-serif;
             touch-action: none;
@@ -21,176 +21,323 @@
             left: 0;
             width: 100%;
             height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* De 'originele' 67 op de achtergrond */
+        #original-67 {
+            position: absolute;
+            font-size: 35vw;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.02);
+            user-select: none;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(8px);
+            transition: color 1s ease;
         }
 
         .number-group {
             position: absolute;
-            font-size: clamp(80px, 15vw, 200px);
             font-weight: bold;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             user-select: none;
             cursor: pointer;
-            z-index: 10;
-            /* Vage dromerige look */
-            filter: blur(1.5px);
-            transition: transform 0.1s ease-out;
+            z-index: 20;
+            will-change: transform, left, top;
         }
 
-        .number-group:active {
-            transform: scale(1.2);
+        /* Grootte voor de hoofd-67 */
+        .main-group {
+            font-size: clamp(60px, 12vw, 150px);
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
         }
 
-        /* Het spoor (trail) effect */
+        /* Grootte voor de mini-67's */
+        .mini-group {
+            font-size: clamp(30px, 6vw, 60px);
+            opacity: 0.9;
+        }
+
+        .numbers-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-display {
+            font-size: 0.25em;
+            font-family: 'Courier New', monospace;
+            margin-top: -5px;
+            letter-spacing: 1px;
+            font-weight: normal;
+        }
+
+        /* Trail effect */
         .trail {
             position: absolute;
             pointer-events: none;
-            opacity: 0.4;
-            filter: blur(8px);
             font-weight: bold;
-            font-size: inherit;
             z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Achtergrond bollen */
         .bg-blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(60px);
-            opacity: 0.15;
+            filter: blur(100px);
+            opacity: 0.1;
             z-index: 1;
+            transition: background-color 1.5s ease;
+        }
+
+        /* Confetti deeltjes */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 24px;
+            z-index: 30;
+            animation: fly-out 1.2s ease-out forwards;
+        }
+
+        @keyframes fly-out {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--tw-x), var(--tw-y)) scale(0) rotate(1080deg); opacity: 0; }
+        }
+
+        #status-msg {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255,255,255,0.15);
+            font-size: 10px;
+            pointer-events: none;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
 
     <div id="canvas-container">
-        <!-- Zwevende bollen in de achtergrond -->
-        <div id="blob1" class="bg-blob" style="width: 300px; height: 300px; top: 20%; left: 10%;"></div>
-        <div id="blob2" class="bg-blob" style="width: 400px; height: 400px; top: 60%; left: 70%;"></div>
-
-        <div id="bouncing-box" class="number-group">
-            <span id="num6">6</span>
-            <span id="num7">7</span>
-        </div>
+        <div id="original-67">67</div>
+        <div id="blob1" class="bg-blob" style="width: 500px; height: 500px; top: -10%; left: -10%;"></div>
+        <div id="blob2" class="bg-blob" style="width: 600px; height: 600px; bottom: -10%; right: -10%;"></div>
     </div>
+
+    <div id="status-msg">Klik op een 67 om een mini-67 te maken!</div>
 
     <script>
         (function() {
             const container = document.getElementById('canvas-container');
-            const box = document.getElementById('bouncing-box');
-            const num6 = document.getElementById('num6');
-            const num7 = document.getElementById('num7');
             const blob1 = document.getElementById('blob1');
             const blob2 = document.getElementById('blob2');
+            const originalBackground = document.getElementById('original-67');
+            const statusMsg = document.getElementById('status-msg');
 
-            let posX = Math.random() * (window.innerWidth - 200);
-            let posY = Math.random() * (window.innerHeight - 200);
-            let dx = 3 + Math.random() * 3;
-            let dy = 3 + Math.random() * 3;
-            let hueValue = 0;
-            
-            // Voor het spoor effect
-            const trails = [];
-            const MAX_TRAILS = 12;
+            const emojis = ['✨', '🌈', '🔥', '💎', '🚀', '🍄', '🍕', '🛸', '🎉', '🎊', '🎈', '⭐', '🍭', '🍦'];
+            const bouncers = [];
+            const MAX_MINIS = 15; // Om lag te voorkomen op laptops
 
-            function createTrail() {
-                const trailEl = document.createElement('div');
-                trailEl.className = 'trail';
-                trailEl.innerHTML = `<span>6</span><span style="margin-left:20px">7</span>`;
-                trailEl.style.fontSize = window.getComputedStyle(box).fontSize;
-                trailEl.style.left = posX + 'px';
-                trailEl.style.top = posY + 'px';
-                trailEl.style.color = num6.style.color;
-                
-                container.appendChild(trailEl);
-                trails.push({
-                    el: trailEl,
-                    opacity: 0.4
-                });
-
-                if (trails.length > MAX_TRAILS) {
-                    const oldTrail = trails.shift();
-                    if (oldTrail.el.parentNode) {
-                        container.removeChild(oldTrail.el);
+            // Wake Lock Logica
+            let wakeLock = null;
+            const requestWakeLock = async () => {
+                if ('wakeLock' in navigator) {
+                    try {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        statusMsg.textContent = "Slaapstand uitgeschakeld - Maak er meer!";
+                        statusMsg.style.color = "rgba(0, 255, 0, 0.2)";
+                    } catch (err) {
+                        statusMsg.textContent = "Wake Lock niet toegestaan";
                     }
                 }
-            }
+            };
 
-            function updateTrails() {
-                for (let i = trails.length - 1; i >= 0; i--) {
-                    trails[i].opacity -= 0.02;
-                    trails[i].el.style.opacity = trails[i].opacity;
-                    if (trails[i].opacity <= 0) {
-                        if (trails[i].el.parentNode) {
-                            container.removeChild(trails[i].el);
+            class BouncingGroup {
+                constructor(isMini = false, startX = null, startY = null) {
+                    this.isMini = isMini;
+                    this.hue = Math.random() * 360;
+                    this.trails = [];
+                    this.maxTrails = isMini ? 5 : 12;
+                    
+                    // Element aanmaken
+                    this.el = document.createElement('div');
+                    this.el.className = `number-group ${isMini ? 'mini-group' : 'main-group'}`;
+                    this.el.innerHTML = `
+                        <div class="numbers-row">
+                            <span class="num6">6</span><span class="num7">7</span>
+                        </div>
+                        <div class="time-display">00:00:00</div>
+                    `;
+                    container.appendChild(this.el);
+
+                    // Afmetingen bepalen
+                    this.width = this.el.offsetWidth;
+                    this.height = this.el.offsetHeight;
+
+                    // Positie en Snelheid
+                    this.x = startX !== null ? startX : Math.random() * (window.innerWidth - this.width);
+                    this.y = startY !== null ? startY : Math.random() * (window.innerHeight - this.height);
+                    
+                    let baseSpeed = isMini ? 4 : 3;
+                    this.dx = (Math.random() > 0.5 ? 1 : -1) * baseSpeed;
+                    this.dy = (Math.random() > 0.5 ? 1 : -1) * baseSpeed;
+
+                    // Interactie
+                    this.el.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        this.onHit();
+                        if (bouncers.length <= MAX_MINIS) {
+                            bouncers.push(new BouncingGroup(true, this.x, this.y));
                         }
-                        trails.splice(i, 1);
+                        requestWakeLock();
+                    });
+
+                    this.updateColor();
+                }
+
+                updateColor() {
+                    const color = `hsl(${this.hue}, 100%, 70%)`;
+                    const num6 = this.el.querySelector('.num6');
+                    const num7 = this.el.querySelector('.num7');
+                    const time = this.el.querySelector('.time-display');
+                    
+                    num6.style.color = color;
+                    num7.style.color = color;
+                    time.style.color = color;
+                    this.el.style.filter = `drop-shadow(0 0 ${this.isMini ? 5 : 15}px ${color})`;
+
+                    if (!this.isMini) {
+                        blob1.style.backgroundColor = `hsl(${(this.hue + 180) % 360}, 80%, 50%)`;
+                        blob2.style.backgroundColor = color;
+                        originalBackground.style.color = `hsl(${this.hue}, 30%, 25%)`;
                     }
+                }
+
+                onHit() {
+                    this.hue = (this.hue + 60 + Math.random() * 40) % 360;
+                    this.updateColor();
+                    this.spawnConfetti();
+                }
+
+                spawnConfetti() {
+                    const count = this.isMini ? 6 : 15;
+                    for (let i = 0; i < count; i++) {
+                        const p = document.createElement('div');
+                        p.className = 'particle';
+                        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                        p.style.left = (this.x + this.width / 2) + 'px';
+                        p.style.top = (this.y + this.height / 2) + 'px';
+                        
+                        const tx = (Math.random() - 0.5) * (this.isMini ? 300 : 500);
+                        const ty = (Math.random() - 0.5) * (this.isMini ? 300 : 500);
+                        p.style.setProperty('--tw-x', `${tx}px`);
+                        p.style.setProperty('--tw-y', `${ty}px`);
+                        
+                        container.appendChild(p);
+                        setTimeout(() => p.remove(), 1200);
+                    }
+                }
+
+                createTrail() {
+                    const trailEl = document.createElement('div');
+                    trailEl.className = 'trail';
+                    trailEl.style.fontSize = window.getComputedStyle(this.el).fontSize;
+                    trailEl.innerHTML = `<div class="numbers-row"><span>6</span><span>7</span></div>`;
+                    trailEl.style.left = this.x + 'px';
+                    trailEl.style.top = this.y + 'px';
+                    trailEl.style.color = `hsl(${this.hue}, 100%, 70%)`;
+                    trailEl.style.opacity = 0.4;
+                    trailEl.style.filter = `blur(${this.isMini ? 4 : 8}px)`;
+                    
+                    container.appendChild(trailEl);
+                    this.trails.push({ el: trailEl, opacity: 0.4 });
+
+                    if (this.trails.length > this.maxTrails) {
+                        const oldTrail = this.trails.shift();
+                        if (oldTrail.el.parentNode) container.removeChild(oldTrail.el);
+                    }
+                }
+
+                updateTrails() {
+                    for (let i = this.trails.length - 1; i >= 0; i--) {
+                        this.trails[i].opacity -= 0.04;
+                        this.trails[i].el.style.opacity = this.trails[i].opacity;
+                        if (this.trails[i].opacity <= 0) {
+                            if (this.trails[i].el.parentNode) container.removeChild(this.trails[i].el);
+                            this.trails.splice(i, 1);
+                        }
+                    }
+                }
+
+                step() {
+                    this.x += this.dx;
+                    this.y += this.dy;
+
+                    let hit = false;
+                    if (this.x + this.width >= window.innerWidth) {
+                        this.x = window.innerWidth - this.width;
+                        this.dx = -Math.abs(this.dx);
+                        hit = true;
+                    } else if (this.x <= 0) {
+                        this.x = 0;
+                        this.dx = Math.abs(this.dx);
+                        hit = true;
+                    }
+
+                    if (this.y + this.height >= window.innerHeight) {
+                        this.y = window.innerHeight - this.height;
+                        this.dy = -Math.abs(this.dy);
+                        hit = true;
+                    } else if (this.y <= 0) {
+                        this.y = 0;
+                        this.dy = Math.abs(this.dy);
+                        hit = true;
+                    }
+
+                    if (hit) this.onHit();
+
+                    this.el.style.left = this.x + 'px';
+                    this.el.style.top = this.y + 'px';
+
+                    const now = new Date();
+                    this.el.querySelector('.time-display').textContent = now.toLocaleTimeString('nl-NL');
+
+                    this.createTrail();
+                    this.updateTrails();
                 }
             }
 
+            // Hoofdlus
             function animate() {
-                const boxWidth = box.offsetWidth;
-                const boxHeight = box.offsetHeight;
-
-                posX += dx;
-                posY += dy;
-
-                // Botsingen met de randen
-                if (posX + boxWidth >= window.innerWidth || posX <= 0) {
-                    dx = -dx;
-                    hueValue = (hueValue + 40) % 360; // Verspring van kleur bij botsing
-                }
-                if (posY + boxHeight >= window.innerHeight || posY <= 0) {
-                    dy = -dy;
-                    hueValue = (hueValue + 40) % 360;
-                }
-
-                box.style.left = posX + 'px';
-                box.style.top = posY + 'px';
-
-                // Kleur updates
-                hueValue = (hueValue + 0.5) % 360;
-                const colorMain = `hsl(${hueValue}, 80%, 65%)`;
-                const colorAlt = `hsl(${(hueValue + 30) % 360}, 80%, 65%)`;
-                
-                num6.style.color = colorMain;
-                num7.style.color = colorAlt;
-                
-                // Gloed effect
-                box.style.textShadow = `0 0 15px ${colorMain}, 0 0 30px ${colorAlt}`;
-
-                // Update achtergrond bollen
-                blob1.style.backgroundColor = colorMain;
-                blob2.style.backgroundColor = colorAlt;
-
-                createTrail();
-                updateTrails();
-
+                bouncers.forEach(b => b.step());
                 requestAnimationFrame(animate);
             }
 
-            // Interactie: Klik om de getallen een "zetje" te geven
-            box.addEventListener('mousedown', () => {
-                dx *= 1.2;
-                dy *= 1.2;
-                // Beperk de snelheid een beetje
-                if (Math.abs(dx) > 15) dx = dx > 0 ? 15 : -15;
-                if (Math.abs(dy) > 15) dy = dy > 0 ? 15 : -15;
-                
-                // Tijdelijk minder wazig bij klik
-                box.style.filter = 'blur(0px)';
-                setTimeout(() => box.style.filter = 'blur(1.5px)', 200);
-            });
+            // Start met de grote 67
+            window.onload = () => {
+                bouncers.push(new BouncingGroup(false));
+                animate();
+            };
 
+            // Resize afhandeling
             window.addEventListener('resize', () => {
-                if (posX + box.offsetWidth > window.innerWidth) posX = window.innerWidth - box.offsetWidth;
-                if (posY + box.offsetHeight > window.innerHeight) posY = window.innerHeight - box.offsetHeight;
+                bouncers.forEach(b => {
+                    b.x = Math.min(b.x, window.innerWidth - b.width);
+                    b.y = Math.min(b.y, window.innerHeight - b.height);
+                });
             });
 
-            // Start de boel
-            window.onload = animate;
+            // Algemene klik voor wake lock (als ze de 67 missen)
+            window.addEventListener('mousedown', () => requestWakeLock(), { once: true });
         })();
     </script>
 </body>
