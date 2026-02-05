@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stuiterende 6 en 7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .number-group {
+            position: absolute;
+            font-size: clamp(80px, 15vw, 200px);
+            font-weight: bold;
+            display: flex;
+            gap: 20px;
+            user-select: none;
+            pointer-events: none;
+            filter: blur(2px); /* Maakt het een beetje vage kleuren */
+            transition: filter 0.3s ease;
+        }
+
+        /* Gloed effect voor de vage kleuren */
+        .glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            filter: blur(30px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <div id="bouncing-box" class="number-group">
+            <div id="glow-effect" class="glow"></div>
+            <span id="num6">6</span>
+            <span id="num7">7</span>
+        </div>
+    </div>
+
+    <script>
+        // We plaatsen alles in een functie om variabele-conflicten te voorkomen
+        (function() {
+            const box = document.getElementById('bouncing-box');
+            const num6 = document.getElementById('num6');
+            const num7 = document.getElementById('num7');
+            const glow = document.getElementById('glow-effect');
+
+            let posX = Math.random() * (window.innerWidth - 200);
+            let posY = Math.random() * (window.innerHeight - 200);
+            let dx = 4;
+            let dy = 4;
+            let hueValue = 0;
+
+            function animate() {
+                const boxWidth = box.offsetWidth;
+                const boxHeight = box.offsetHeight;
+
+                // Update positie
+                posX += dx;
+                posY += dy;
+
+                // Botsing detectie met randen van het scherm
+                if (posX + boxWidth >= window.innerWidth || posX <= 0) {
+                    dx = -dx;
+                }
+                if (posY + boxHeight >= window.innerHeight || posY <= 0) {
+                    dy = -dy;
+                }
+
+                // Pas positie toe
+                box.style.left = posX + 'px';
+                box.style.top = posY + 'px';
+
+                // Kleur animatie (vage regenboog flow)
+                hueValue = (hueValue + 1) % 360;
+                const color = `hsl(${hueValue}, 80%, 60%)`;
+                const shadowColor = `hsl(${(hueValue + 40) % 360}, 80%, 50%)`;
+                
+                num6.style.color = color;
+                num7.style.color = `hsl(${(hueValue + 20) % 360}, 80%, 60%)`;
+                
+                // Voeg een vage tekstschaduw toe voor het "vage" effect
+                box.style.textShadow = `0 0 20px ${color}, 0 0 40px ${shadowColor}`;
+                glow.style.background = `radial-gradient(circle, ${color}33 0%, rgba(0,0,0,0) 70%)`;
+
+                requestAnimationFrame(animate);
+            }
+
+            // Zorg dat het werkt bij het resizen van het venster
+            window.addEventListener('resize', () => {
+                if (posX + box.offsetWidth > window.innerWidth) posX = window.innerWidth - box.offsetWidth;
+                if (posY + box.offsetHeight > window.innerHeight) posY = window.innerHeight - box.offsetHeight;
+            });
+
+            // Start de animatie zodra de pagina geladen is
+            window.onload = () => {
+                animate();
+            };
+        })();
+    </script>
+</body>
+</html>
