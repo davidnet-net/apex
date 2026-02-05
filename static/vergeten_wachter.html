@@ -72,6 +72,13 @@
             text-shadow: 0 0 5px #e6c65c;
         }
 
+        #current-weapon {
+            margin-top: 5px;
+            font-size: 16px;
+            color: #ccc;
+            transition: color 0.3s;
+        }
+
         /* Boss HUD */
         #boss-hud {
             bottom: 40px;
@@ -193,6 +200,7 @@
         <div class="bar-container"><div id="hp-bar" class="bar"></div></div>
         <div class="bar-container"><div id="stamina-bar" class="bar"></div></div>
         <div id="flask-counter">Estus Flessen: 3</div>
+        <div id="current-weapon">Wapen: Oude Stok</div>
     </div>
 
     <!-- Boss HUD -->
@@ -232,6 +240,7 @@
         hp: document.getElementById('hp-bar'),
         stamina: document.getElementById('stamina-bar'),
         estus: document.getElementById('flask-counter'),
+        weaponName: document.getElementById('current-weapon'),
         bossHud: document.getElementById('boss-hud'),
         bossHp: document.getElementById('boss-hp-bar'),
         death: document.getElementById('death-screen'),
@@ -267,6 +276,48 @@
     window.addEventListener('mouseup', () => mouse.down = false);
 
     /* --- GAME LOGICA --- */
+
+    const WEAPONS = {
+        default: { name: "Oude Stok", damage: 15, range: 60, speed: 15, color: '#aaa', width: 4 },
+        greatsword: { name: "Vuurzwaard", damage: 45, range: 110, speed: 35, color: '#ff4400', width: 10 },
+        dagger: { name: "Schaduw Dolk", damage: 10, range: 40, speed: 5, color: '#a020f0', width: 3 },
+        spear: { name: "Donder Speer", damage: 25, range: 140, speed: 20, color: '#00ffff', width: 5 }
+    };
+
+    class Pickup {
+        constructor(x, y, type) {
+            this.x = x;
+            this.y = y;
+            this.typeKey = type;
+            this.data = WEAPONS[type];
+            this.radius = 10;
+            this.life = 0; // for animation
+        }
+        
+        draw(ctx) {
+            this.life += 0.05;
+            const floatY = Math.sin(this.life) * 5;
+            
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = this.data.color;
+            ctx.fillStyle = this.data.color;
+            
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + floatY, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px Cinzel';
+            ctx.textAlign = 'center';
+            ctx.fillText("?", this.x, this.y + floatY + 4);
+            
+            ctx.shadowBlur = 0;
+        }
+    }
 
     class Particle {
         constructor(x, y, color, speed, size) {
@@ -336,17 +387,46 @@
             this.flasks = 3;
             this.state = 'idle'; // idle, rolling, attacking
             this.angle = 0;
-            this.weaponLength = 60;
-            this.weaponWidth = 40; // arc width in degrees
+            
+            // Weapon Logic
+            this.activeWeapon = WEAPONS.default;
+            this.weaponTimer = 0; // Frames remaining
+            
             this.rollDuration = 20; // frames
             this.rollCooldown = 0;
-            this.attackDuration = 15;
             this.attackCooldown = 0;
             this.timer = 0;
         }
 
+        equip(key) {
+            this.activeWeapon = WEAPONS[key];
+            this.weaponTimer = 480; // 8 seconds * 60 fps
+            
+            ui.weaponName.innerText = `Wapen: ${this.activeWeapon.name} (8s)`;
+            ui.weaponName.style.color = this.activeWeapon.color;
+            
+            // Equip effect
+            for(let i=0; i<20; i++) {
+                game.particles.push(new Particle(this.x, this.y, this.activeWeapon.color, 4, 3));
+            }
+        }
+
         update() {
             if (this.dead) return;
+
+            // Weapon Timer
+            if (this.weaponTimer > 0) {
+                this.weaponTimer--;
+                if (this.weaponTimer % 60 === 0) {
+                     ui.weaponName.innerText = `Wapen: ${this.activeWeapon.name} (${Math.ceil(this.weaponTimer/60)}s)`;
+                }
+                
+                if (this.weaponTimer <= 0) {
+                    this.activeWeapon = WEAPONS.default;
+                    ui.weaponName.innerText = "Wapen: Oude Stok";
+                    ui.weaponName.style.color = '#ccc';
+                }
+            }
 
             // Stamina Regen
             if (this.state === 'idle' && this.stamina < this.maxStamina) {
@@ -429,37 +509,37 @@
                 
                 // Weapon visual
                 if (this.state === 'attacking') {
-                    ctx.fillStyle = '#fff';
-                    ctx.shadowColor = '#fff';
+                    ctx.fillStyle = this.activeWeapon.color;
+                    ctx.shadowColor = this.activeWeapon.color;
                     ctx.shadowBlur = 20;
                     
                     // Swing animation
-                    const progress = 1 - (this.timer / this.attackDuration); // 0 to 1
+                    const progress = 1 - (this.timer / this.activeWeapon.speed); // 0 to 1
                     const swingArc = Math.PI / 2; // 90 degrees
                     const startAngle = -swingArc / 2;
                     const currentAngle = startAngle + (swingArc * progress);
                     
                     ctx.rotate(currentAngle);
-                    ctx.fillRect(0, -2, this.weaponLength, 4);
+                    ctx.fillRect(0, -this.activeWeapon.width/2, this.activeWeapon.range, this.activeWeapon.width);
                     
                     // Hitbox logic (only once per swing, simplistically checked every frame but gated by enemies iframe)
                     // Check collision with boss
-                    const tipX = this.x + Math.cos(this.angle + currentAngle) * this.weaponLength;
-                    const tipY = this.y + Math.sin(this.angle + currentAngle) * this.weaponLength;
+                    const tipX = this.x + Math.cos(this.angle + currentAngle) * this.activeWeapon.range;
+                    const tipY = this.y + Math.sin(this.angle + currentAngle) * this.activeWeapon.range;
                     
                     if (!game.boss.dead && !game.boss.invulnerable) {
                         const dist = Math.hypot(tipX - game.boss.x, tipY - game.boss.y);
-                        if (dist < game.boss.radius + 20) {
-                            game.boss.takeDamage(15); // Player Damage
+                        if (dist < game.boss.radius + 30) { // Slight generous hit detection
+                            game.boss.takeDamage(this.activeWeapon.damage); // Player Damage
                             game.shake(5);
                             game.boss.invulnerable = true;
-                            setTimeout(() => game.boss.invulnerable = false, 200);
+                            setTimeout(() => game.boss.invulnerable = false, Math.max(200, this.activeWeapon.speed * 10));
                         }
                     }
 
                 } else {
                     // Static weapon holding
-                    ctx.fillStyle = '#aaa';
+                    ctx.fillStyle = this.activeWeapon.color;
                     ctx.shadowBlur = 0;
                     ctx.fillRect(10, -2, 30, 4);
                 }
@@ -496,7 +576,7 @@
             
             this.stamina -= 20;
             this.state = 'attacking';
-            this.timer = this.attackDuration;
+            this.timer = this.activeWeapon.speed;
         }
 
         heal() {
@@ -653,13 +733,16 @@
     class Game {
         constructor() {
             this.particles = [];
+            this.pickups = [];
             this.shakeTimer = 0;
             this.active = false;
+            this.pickupTimer = 0;
         }
 
         init() {
             this.player = new Player();
             this.boss = new Boss();
+            this.pickups = [];
             this.active = true;
             ui.death.style.display = 'none';
             ui.victory.style.display = 'none';
@@ -683,6 +766,20 @@
         loop() {
             if (!this.active) return;
 
+            // Spawn Pickups (Every 10 seconds approx)
+            this.pickupTimer++;
+            if (this.pickupTimer > 600) { // 600 frames = 10s
+                this.pickupTimer = 0;
+                if (this.pickups.length < 3) {
+                    const types = ['greatsword', 'dagger', 'spear'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    // Random position, but away from edges
+                    const px = 100 + Math.random() * (canvas.width - 200);
+                    const py = 100 + Math.random() * (canvas.height - 200);
+                    this.pickups.push(new Pickup(px, py, type));
+                }
+            }
+
             // Clear
             ctx.fillStyle = 'rgba(5, 5, 5, 0.3)'; // Trail effect
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -691,6 +788,16 @@
             this.player.update();
             if (!this.player.dead) {
                 this.boss.update(this.player);
+            }
+
+            // Check Pickup Collisions
+            for (let i = this.pickups.length - 1; i >= 0; i--) {
+                const p = this.pickups[i];
+                const dist = Math.hypot(this.player.x - p.x, this.player.y - p.y);
+                if (dist < this.player.radius + p.radius) {
+                    this.player.equip(p.typeKey);
+                    this.pickups.splice(i, 1);
+                }
             }
 
             // Particles
@@ -702,6 +809,9 @@
             }
 
             // Draw Entities
+            // Draw Pickups
+            this.pickups.forEach(p => p.draw(ctx));
+            
             this.boss.draw(ctx);
             this.player.draw(ctx);
 
