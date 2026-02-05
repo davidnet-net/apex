@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stuiterende 6 en 7</title>
+    <title>Stuiterende 6 en 7 - Deluxe Editie</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background-color: #050505;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
             font-family: 'Arial', sans-serif;
+            touch-action: none;
         }
 
         #canvas-container {
@@ -32,94 +30,167 @@
             display: flex;
             gap: 20px;
             user-select: none;
-            pointer-events: none;
-            filter: blur(2px); /* Maakt het een beetje vage kleuren */
-            transition: filter 0.3s ease;
+            cursor: pointer;
+            z-index: 10;
+            /* Vage dromerige look */
+            filter: blur(1.5px);
+            transition: transform 0.1s ease-out;
         }
 
-        /* Gloed effect voor de vage kleuren */
-        .glow {
+        .number-group:active {
+            transform: scale(1.2);
+        }
+
+        /* Het spoor (trail) effect */
+        .trail {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150%;
-            height: 150%;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0) 70%);
-            z-index: -1;
-            filter: blur(30px);
+            pointer-events: none;
+            opacity: 0.4;
+            filter: blur(8px);
+            font-weight: bold;
+            font-size: inherit;
+            z-index: 5;
+        }
+
+        /* Achtergrond bollen */
+        .bg-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.15;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
 
     <div id="canvas-container">
+        <!-- Zwevende bollen in de achtergrond -->
+        <div id="blob1" class="bg-blob" style="width: 300px; height: 300px; top: 20%; left: 10%;"></div>
+        <div id="blob2" class="bg-blob" style="width: 400px; height: 400px; top: 60%; left: 70%;"></div>
+
         <div id="bouncing-box" class="number-group">
-            <div id="glow-effect" class="glow"></div>
             <span id="num6">6</span>
             <span id="num7">7</span>
         </div>
     </div>
 
     <script>
-        // We plaatsen alles in een functie om variabele-conflicten te voorkomen
         (function() {
+            const container = document.getElementById('canvas-container');
             const box = document.getElementById('bouncing-box');
             const num6 = document.getElementById('num6');
             const num7 = document.getElementById('num7');
-            const glow = document.getElementById('glow-effect');
+            const blob1 = document.getElementById('blob1');
+            const blob2 = document.getElementById('blob2');
 
             let posX = Math.random() * (window.innerWidth - 200);
             let posY = Math.random() * (window.innerHeight - 200);
-            let dx = 4;
-            let dy = 4;
+            let dx = 3 + Math.random() * 3;
+            let dy = 3 + Math.random() * 3;
             let hueValue = 0;
+            
+            // Voor het spoor effect
+            const trails = [];
+            const MAX_TRAILS = 12;
+
+            function createTrail() {
+                const trailEl = document.createElement('div');
+                trailEl.className = 'trail';
+                trailEl.innerHTML = `<span>6</span><span style="margin-left:20px">7</span>`;
+                trailEl.style.fontSize = window.getComputedStyle(box).fontSize;
+                trailEl.style.left = posX + 'px';
+                trailEl.style.top = posY + 'px';
+                trailEl.style.color = num6.style.color;
+                
+                container.appendChild(trailEl);
+                trails.push({
+                    el: trailEl,
+                    opacity: 0.4
+                });
+
+                if (trails.length > MAX_TRAILS) {
+                    const oldTrail = trails.shift();
+                    if (oldTrail.el.parentNode) {
+                        container.removeChild(oldTrail.el);
+                    }
+                }
+            }
+
+            function updateTrails() {
+                for (let i = trails.length - 1; i >= 0; i--) {
+                    trails[i].opacity -= 0.02;
+                    trails[i].el.style.opacity = trails[i].opacity;
+                    if (trails[i].opacity <= 0) {
+                        if (trails[i].el.parentNode) {
+                            container.removeChild(trails[i].el);
+                        }
+                        trails.splice(i, 1);
+                    }
+                }
+            }
 
             function animate() {
                 const boxWidth = box.offsetWidth;
                 const boxHeight = box.offsetHeight;
 
-                // Update positie
                 posX += dx;
                 posY += dy;
 
-                // Botsing detectie met randen van het scherm
+                // Botsingen met de randen
                 if (posX + boxWidth >= window.innerWidth || posX <= 0) {
                     dx = -dx;
+                    hueValue = (hueValue + 40) % 360; // Verspring van kleur bij botsing
                 }
                 if (posY + boxHeight >= window.innerHeight || posY <= 0) {
                     dy = -dy;
+                    hueValue = (hueValue + 40) % 360;
                 }
 
-                // Pas positie toe
                 box.style.left = posX + 'px';
                 box.style.top = posY + 'px';
 
-                // Kleur animatie (vage regenboog flow)
-                hueValue = (hueValue + 1) % 360;
-                const color = `hsl(${hueValue}, 80%, 60%)`;
-                const shadowColor = `hsl(${(hueValue + 40) % 360}, 80%, 50%)`;
+                // Kleur updates
+                hueValue = (hueValue + 0.5) % 360;
+                const colorMain = `hsl(${hueValue}, 80%, 65%)`;
+                const colorAlt = `hsl(${(hueValue + 30) % 360}, 80%, 65%)`;
                 
-                num6.style.color = color;
-                num7.style.color = `hsl(${(hueValue + 20) % 360}, 80%, 60%)`;
+                num6.style.color = colorMain;
+                num7.style.color = colorAlt;
                 
-                // Voeg een vage tekstschaduw toe voor het "vage" effect
-                box.style.textShadow = `0 0 20px ${color}, 0 0 40px ${shadowColor}`;
-                glow.style.background = `radial-gradient(circle, ${color}33 0%, rgba(0,0,0,0) 70%)`;
+                // Gloed effect
+                box.style.textShadow = `0 0 15px ${colorMain}, 0 0 30px ${colorAlt}`;
+
+                // Update achtergrond bollen
+                blob1.style.backgroundColor = colorMain;
+                blob2.style.backgroundColor = colorAlt;
+
+                createTrail();
+                updateTrails();
 
                 requestAnimationFrame(animate);
             }
 
-            // Zorg dat het werkt bij het resizen van het venster
+            // Interactie: Klik om de getallen een "zetje" te geven
+            box.addEventListener('mousedown', () => {
+                dx *= 1.2;
+                dy *= 1.2;
+                // Beperk de snelheid een beetje
+                if (Math.abs(dx) > 15) dx = dx > 0 ? 15 : -15;
+                if (Math.abs(dy) > 15) dy = dy > 0 ? 15 : -15;
+                
+                // Tijdelijk minder wazig bij klik
+                box.style.filter = 'blur(0px)';
+                setTimeout(() => box.style.filter = 'blur(1.5px)', 200);
+            });
+
             window.addEventListener('resize', () => {
                 if (posX + box.offsetWidth > window.innerWidth) posX = window.innerWidth - box.offsetWidth;
                 if (posY + box.offsetHeight > window.innerHeight) posY = window.innerHeight - box.offsetHeight;
             });
 
-            // Start de animatie zodra de pagina geladen is
-            window.onload = () => {
-                animate();
-            };
+            // Start de boel
+            window.onload = animate;
         })();
     </script>
 </body>
