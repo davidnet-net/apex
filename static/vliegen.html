@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Vluchtsimulator - Pro Edition</title>
+    <title>3D Vluchtsimulator - Ultimate Edition</title>
     <style>
         body {
             margin: 0;
@@ -182,8 +182,9 @@
     <div id="instructions">
         <b>Besturing (Inverted Y):</b><br>
         Muis omhoog = OMHOOG | Muis omlaag = OMLAAG<br>
+        Muis links/rechts = STUREN (Houd vast om te draaien)<br>
         Houd <b>W</b> ingedrukt om op te stijgen<br>
-        <span style="color: lightgreen">Druk 'F' voor Flap Levels (0-4) | Max Hoogte: 4000ft</span>
+        <span style="color: lightgreen">Druk 'F' voor Flaps | A/D voor Rollen</span>
     </div>
 
     <div id="crosshair"></div>
@@ -205,16 +206,16 @@
         </div>
         <div class="instrument">
             <div id="compass-container">
-                <div id="compass-arrow"></div>
+                <div id="compass-arrow" style="transform: translate(-50%, -50%) rotate(0deg);"></div>
             </div>
-            <span class="label" id="heading-display">NOORD</span>
+            <span class="label" id="heading-display">ZUID</span>
         </div>
         <div class="instrument">
             <span class="value" id="flaps-display">0</span>
             <span class="label">Flaps (F)</span>
         </div>
         <div class="instrument">
-            <span class="value" id="alt-display">0</span>
+            <span class="value" id="alt-display">25</span>
             <span class="label">Hoogte (ft)</span>
         </div>
     </div>
@@ -222,17 +223,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <script>
-        // 50% kans op nacht
-        const isNight = Math.random() > 0.5;
+        // AANGEPAST: Kans op nacht is nu 20% (was 50%)
+        const isNight = Math.random() > 0.8;
         const skyColor = isNight ? 0x050510 : 0x87CEEB;
         const ambientIntensity = isNight ? 0.2 : 0.6;
         const sunIntensity = isNight ? 0.1 : 0.8;
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(skyColor);
-        scene.fog = new THREE.Fog(skyColor, 200, 2500); 
+        scene.fog = new THREE.Fog(skyColor, 200, 3500); 
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 8000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
@@ -255,20 +256,22 @@
         let isGameOver = false;
         let explosionParticles = [];
         let obstacles = [];
-        let gameStartTime = Date.now();
-
+        
         const RUNWAY_LENGTH = 600;
         const RUNWAY_WIDTH = 40;
         const RUNWAY_HEIGHT = -78; 
         const PLANE_OFFSET = 2.5; 
 
-        // Landingsbaan grid
+        // UITGEBREID LANDINGSBAAN GRID
         const runways = [];
-        for(let x = -2; x <= 2; x++) {
-            for(let z = -2; z <= 2; z++) {
+        for(let x = -6; x <= 6; x++) {
+            for(let z = -6; z <= 6; z++) {
+                let offsetX = (Math.random() - 0.5) * 1000;
+                let offsetZ = (Math.random() - 0.5) * 1000;
+                
                 runways.push({
-                    x: x * 4000,
-                    z: z * 4000,
+                    x: (x * 4000) + offsetX,
+                    z: (z * 4000) + offsetZ,
                     rotation: (Math.random() > 0.5 ? 0 : Math.PI / 2)
                 });
             }
@@ -276,6 +279,10 @@
 
         function createPlane() {
             const planeGroup = new THREE.Group();
+            // AANGEPAST: Rotatie volgorde YXZ helpt om "gimbal lock" te voorkomen
+            // en zorgt ervoor dat yaw (links/rechts) logisch werkt ongeacht pitch/roll.
+            planeGroup.rotation.order = 'YXZ';
+
             const fuselageColor = 0xffffff;
             const wingColor = 0xcc0000;
 
@@ -317,7 +324,6 @@
             planeGroup.add(propGroup);
             planeGroup.userData.propeller = propGroup;
 
-            // Navigatieverlichting
             const lightGeo = new THREE.SphereGeometry(0.4, 8, 8);
             
             const redLight = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: 0xff0000 }));
@@ -333,11 +339,10 @@
             planeGroup.add(whiteLight);
             planeGroup.userData.strobe = whiteLight;
 
-            // Koplamp (Landing light) voor nachtvluchten
             if (isNight) {
-                const landingLight = new THREE.SpotLight(0xffffff, 2, 300, Math.PI / 6, 0.5);
+                const landingLight = new THREE.SpotLight(0xffffff, 2, 400, Math.PI / 6, 0.5);
                 landingLight.position.set(0, 0, 7);
-                landingLight.target.position.set(0, -2, 50);
+                landingLight.target.position.set(0, -5, 100);
                 planeGroup.add(landingLight);
                 planeGroup.add(landingLight.target);
             }
@@ -354,7 +359,7 @@
         }
 
         const groundSize = 15000; 
-        const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 150, 150);
+        const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 100, 100);
         groundGeo.rotateX(-Math.PI / 2);
 
         const vertices = groundGeo.attributes.position.array;
@@ -412,24 +417,31 @@
             const lightGeo = new THREE.SphereGeometry(1.2, 8, 8);
             const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-            for(let i=0; i<1000; i++) {
+            const areaSize = 40000;
+            const towerCount = 4000; 
+
+            for(let i=0; i<towerCount; i++) {
                 const tower = new THREE.Mesh(towerGeo, towerMat);
-                let tx = (Math.random() - 0.5) * 20000;
-                let tz = (Math.random() - 0.5) * 20000;
+                let tx = (Math.random() - 0.5) * areaSize;
+                let tz = (Math.random() - 0.5) * areaSize;
 
-                let safe = false;
-                runways.forEach(r => {
-                    const dx = tx - r.x;
-                    const dz = tz - r.z;
-                    if(dx*dx + dz*dz < 500 * 500) safe = true;
-                });
+                let isNearRunway = false;
+                for (let r of runways) {
+                     let dx = tx - r.x;
+                     let dz = tz - r.z;
+                     if(dx*dx + dz*dz < 600 * 600) {
+                         isNearRunway = true;
+                         break;
+                     }
+                }
 
-                if(!safe) {
+                if(!isNearRunway) {
                     tower.position.set(tx, -40, tz); 
-                    tower.castShadow = true;
-                    tower.receiveShadow = true;
+                    if (Math.abs(tx) < 2000 && Math.abs(tz) < 2000) {
+                        tower.castShadow = true;
+                        tower.receiveShadow = true;
+                    }
                     
-                    // Waarschuwingslampje bovenop de toren
                     const redBulb = new THREE.Mesh(lightGeo, lightMat);
                     redBulb.position.set(0, 40, 0);
                     tower.add(redBulb);
@@ -443,6 +455,9 @@
 
         function getGroundHeightAt(x, z) {
             for(let r of runways) {
+                const distSq = (x - r.x)*(x - r.x) + (z - r.z)*(z - r.z);
+                if (distSq > 500*500) continue;
+
                 const dx = x - r.x;
                 const dz = z - r.z;
                 const localX = dx * Math.cos(-r.rotation) - dz * Math.sin(-r.rotation);
@@ -515,7 +530,6 @@
 
         document.addEventListener('mousemove', (e) => {
             if(isGameOver) return;
-            // Meer gevoeligheid
             flightState.input.x = (e.clientX / window.innerWidth) * 2 - 1;
             flightState.input.y = (e.clientY / window.innerHeight) * 2 - 1;
         });
@@ -561,12 +575,15 @@
             const rotDeg = THREE.MathUtils.radToDeg(airplane.rotation.y);
             document.getElementById('compass-arrow').style.transform = `translate(-50%, -50%) rotate(${-rotDeg}deg)`;
             
-            let normalizedRot = rotDeg % 360;
+            let normalizedRot = (-rotDeg) % 360;
             if(normalizedRot < 0) normalizedRot += 360;
-            let headingText = "ZUID"; 
-            if (normalizedRot > 45 && normalizedRot <= 135) headingText = "OOST"; 
-            else if (normalizedRot > 135 && normalizedRot <= 225) headingText = "NOORD";
-            else if (normalizedRot > 225 && normalizedRot <= 315) headingText = "WEST";
+            
+            let headingText = "---"; 
+            if (normalizedRot >= 315 || normalizedRot < 45) headingText = "ZUID";
+            else if (normalizedRot >= 45 && normalizedRot < 135) headingText = "OOST";
+            else if (normalizedRot >= 135 && normalizedRot < 225) headingText = "NOORD";
+            else if (normalizedRot >= 225 && normalizedRot < 315) headingText = "WEST";
+            
             document.getElementById('heading-display').innerText = headingText;
 
             let warningActive = false;
@@ -603,7 +620,6 @@
                 return; 
             }
 
-            // Strobe effect voor staartlicht
             if (airplane.userData.strobe) {
                 airplane.userData.strobe.visible = (Math.floor(Date.now() / 200) % 5 === 0);
             }
@@ -619,7 +635,7 @@
             
             let targetSpeed = flightState.throttle * flightState.maxSpeed * altitudeFactor;
             targetSpeed *= (1 - (flightState.flaps * 0.1));
-            targetSpeed -= airplane.rotation.x * -2.5; 
+            targetSpeed -= Math.abs(airplane.rotation.x) * 1.5;
 
             const accelFactor = flightState.speed < 1.0 ? 0.05 : 0.02;
             flightState.speed = THREE.MathUtils.lerp(flightState.speed, targetSpeed, accelFactor);
@@ -642,6 +658,7 @@
                 }
 
                 let verticalIntent = Math.sin(-airplane.rotation.x) * flightState.speed;
+                
                 const currentGroundHeight = getGroundHeightAt(airplane.position.x, airplane.position.z);
                 const heightAboveGround = airplane.position.y - currentGroundHeight;
 
@@ -657,6 +674,7 @@
                         airplane.position.y = currentGroundHeight + PLANE_OFFSET;
                         flightState.verticalVelocity = 0;
                         airplane.rotation.z = THREE.MathUtils.lerp(airplane.rotation.z, 0, 0.1);
+                        airplane.rotation.x = THREE.MathUtils.lerp(airplane.rotation.x, 0, 0.1); 
                         if(flightState.throttle === 0) flightState.speed *= 0.98;
                         if(flightState.speed > (currentStallSpeed + 0.5)) {
                             flightState.verticalVelocity = 0.25; 
@@ -672,28 +690,31 @@
             }
             if(flightState.verticalVelocity < -2.2) flightState.verticalVelocity = -2.2;
 
-            // Mobiliteit updates
             if (!flightState.isStalling && !flightState.isParked) {
-                let targetPitch = flightState.input.y * 1.5; // Verhoogde pitch
+                let targetPitch = flightState.input.y * 1.5;
                 const groundH = getGroundHeightAt(airplane.position.x, airplane.position.z);
+                
                 if (airplane.position.y < groundH + PLANE_OFFSET + 2.0) {
                      if (targetPitch > 0) targetPitch = 0;
                      if (flightState.speed > 2.5) if (targetPitch > -0.4) targetPitch = -0.4;
                 }
                 
-                airplane.rotation.x = THREE.MathUtils.lerp(airplane.rotation.x, targetPitch, 0.08); // Snellere lerp
-                airplane.rotateY(-flightState.input.x * 0.045); // Verhoogde yaw
+                airplane.rotation.x = THREE.MathUtils.lerp(airplane.rotation.x, targetPitch, 0.08);
                 
-                let targetRoll = -flightState.input.x * 2.0; // Verhoogde roll
-                if (flightState.keys.a) targetRoll = 2.5;
-                if (flightState.keys.d) targetRoll = -2.5;
+                // AANGEPAST: Iets snellere draaisnelheid (0.05 -> 0.07)
+                airplane.rotateY(-flightState.input.x * 0.07); 
                 
-                airplane.rotation.z = THREE.MathUtils.lerp(airplane.rotation.z, targetRoll, 0.08); // Snellere lerp
+                let targetRoll = -flightState.input.x * 2.0;
+                if (flightState.keys.a) { targetRoll = 2.5; airplane.rotateY(0.02); }
+                if (flightState.keys.d) { targetRoll = -2.5; airplane.rotateY(-0.02); }
+                
+                airplane.rotation.z = THREE.MathUtils.lerp(airplane.rotation.z, targetRoll, 0.08);
             }
 
             if(!flightState.isParked) {
                 const direction = new THREE.Vector3(0, 0, 1);
-                direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), airplane.rotation.y);
+                direction.applyQuaternion(airplane.quaternion);
+                
                 airplane.position.add(direction.multiplyScalar(flightState.speed));
                 airplane.position.y += flightState.verticalVelocity;
             } else {
@@ -701,15 +722,19 @@
                 airplane.position.y = currentGroundHeight + PLANE_OFFSET;
             }
 
-            // Obstakel collision check
             const planePos = airplane.position;
-            for(let i=0; i<obstacles.length; i++) {
-                const tower = obstacles[i];
-                const dx = planePos.x - tower.position.x;
-                const dz = planePos.z - tower.position.z;
-                if (Math.abs(dx) < 15 && Math.abs(dz) < 15 && planePos.y < 40) {
-                     triggerCrash();
-                     break;
+            if (planePos.y < 80) { 
+                for(let i=0; i<obstacles.length; i++) {
+                    const tower = obstacles[i];
+                    if (Math.abs(planePos.x - tower.position.x) > 20) continue;
+                    if (Math.abs(planePos.z - tower.position.z) > 20) continue;
+
+                    const dx = planePos.x - tower.position.x;
+                    const dz = planePos.z - tower.position.z;
+                    if (dx*dx + dz*dz < 225) { 
+                          triggerCrash();
+                          break;
+                    }
                 }
             }
 
@@ -717,14 +742,14 @@
             
             const relativeCameraOffset = new THREE.Vector3(0, 8, -25);
             const cameraOffset = relativeCameraOffset.applyMatrix4(airplane.matrixWorld);
-            camera.position.lerp(cameraOffset, 0.1);
+            
+            camera.position.lerp(cameraOffset, 0.12);
             cameraShake();
             
-            const lookAtPos = new THREE.Vector3(0, 0, 20);
+            const lookAtPos = new THREE.Vector3(0, 0, 50);
             lookAtPos.applyMatrix4(airplane.matrixWorld);
             camera.lookAt(lookAtPos);
 
-            // Ground/Skybox infinity loop
             const groundLimit = 5000; 
             if (Math.abs(airplane.position.x - ground.position.x) > groundLimit) {
                 ground.position.x = airplane.position.x;
@@ -741,8 +766,19 @@
 
         animate();
         
-        airplane.position.set(0, RUNWAY_HEIGHT + PLANE_OFFSET, -200);
-        airplane.rotation.set(0, 0, 0); 
+        // AANGEPAST: Preciezere spawn logica zodat je altijd op de baan staat
+        const startRunway = runways[Math.floor(Math.random() * runways.length)];
+        const spawnOffset = 250; 
+        
+        // Bereken positie gebaseerd op rotatie van de baan
+        // Als rotatie 0 is, loopt baan over Z-as (Noord-Zuid). We moeten verschuiven over Z.
+        // Als rotatie 90 is, loopt baan over X-as (Oost-West). We moeten verschuiven over X.
+        const spawnX = startRunway.x - (Math.sin(startRunway.rotation) * spawnOffset);
+        const spawnZ = startRunway.z - (Math.cos(startRunway.rotation) * spawnOffset);
+
+        airplane.position.set(spawnX, RUNWAY_HEIGHT + PLANE_OFFSET, spawnZ);
+        airplane.rotation.set(0, startRunway.rotation, 0); 
+        
         flightState.speed = 0;
         flightState.throttle = 0;
         flightState.verticalVelocity = 0;
@@ -751,7 +787,7 @@
         setTimeout(() => {
             const instr = document.getElementById('instructions');
             if(instr) instr.style.opacity = 0;
-        }, 10000);
+        }, 12000);
 
     </script>
 </body>
