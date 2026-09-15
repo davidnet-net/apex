@@ -10,6 +10,7 @@ spec:
       kind: Rule
       services:
         - name: {{ include "davidnet-apex-frontend.fullname" . }}
+          kind: Service
           port: {{ .Values.service.port }}
   tls:
     secretName: {{ .Values.ingress.host }}-tls
