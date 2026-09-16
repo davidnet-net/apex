@@ -21,7 +21,9 @@
 		Tabs,
 		TabPanel,
 		Field,
-		TextArea
+		TextArea,
+		Spinner,
+		Dropdown
 	} from "@davidnet-net/svelte-ui";
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
@@ -35,11 +37,23 @@
 
 	// Modal State
 	let openReport = $state<ModeratorQueueReport | undefined>(undefined);
-	let modalTab = $state<"details" | "actions">("details");
+	let modalTab = $state<"details" | "actions" | "ban">("details");
 	let isActioning = $state(false);
+
+	// Track active short moderation status and direct video URL when reviewing a short report
+	let shortIsModerated = $state(false);
+	let shortVideoUrl = $state<string | null>(null);
 
 	// Form State for actions
 	let modReason = $state("");
+
+	// Ban State
+	let banDropdownOpen = $state(false);
+	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever" | "custom">(
+		"1day"
+	);
+	let customBanDateTime = $state("");
+	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
 	$effect(() => {
 		const currentFilter = filterStatus;
@@ -67,6 +81,36 @@
 		loading = false;
 	}
 
+	async function fetchShortDetails(shortId: string) {
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/social/shorts/${shortId}`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success && res.short) {
+			shortIsModerated = res.short.isModerated;
+			shortVideoUrl = res.short.videoUrl;
+		} else {
+			shortIsModerated = false;
+			shortVideoUrl = null;
+		}
+	}
+
+	async function fetchUserBanStatus(userId: string) {
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/users/${userId}/ban-status`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			currentBanStatus = { isBanned: res.isBanned, bannedUntil: res.bannedUntil };
+		} else {
+			currentBanStatus = null;
+		}
+	}
+
 	// --- MODERATION ACTIONS ---
 
 	async function updateReportStatus(newStatus: "resolved" | "dismissed" | "pending") {
@@ -80,9 +124,12 @@
 		);
 
 		if (res && res.success) {
-			toast(`Report marked as ${newStatus}`, undefined, undefined, 2000, "success");
+			toast(`Reports marked as ${newStatus}`, undefined, undefined, 2000, "success");
+
 			reportsQueue = reportsQueue.map((r) =>
-				r.id === openReport!.id ? { ...r, status: newStatus } : r
+				r.reportedId === openReport!.reportedId && r.reportType === openReport!.reportType
+					? { ...r, status: newStatus }
+					: r
 			);
 			openReport.status = newStatus;
 		} else {
@@ -102,6 +149,7 @@
 		);
 
 		if (res && res.success) {
+			shortIsModerated = hide;
 			toast(
 				hide ? "Content hidden from feed" : "Content unmoderated",
 				undefined,
@@ -127,7 +175,7 @@
 		);
 
 		if (res && res.success) {
-			toast("Profile UGC cleared and reset", undefined, undefined, 2000, "success");
+			toast("Profile UGC cleared", undefined, undefined, 2000, "success");
 		} else {
 			toast("Failed to clear profile UGC", undefined, undefined, 2000, "danger");
 		}
@@ -170,6 +218,64 @@
 		isActioning = false;
 	}
 
+	async function executeBanUser(bannedUntil: string | null) {
+		if (!openReport) return;
+		isActioning = true;
+
+		const res = await patchFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/users/${openReport.reportedUserId}/ban`,
+			{ bannedUntil },
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			toast(
+				bannedUntil ? "User banned successfully" : "User unbanned successfully",
+				undefined,
+				undefined,
+				2000,
+				"success"
+			);
+			await fetchUserBanStatus(openReport.reportedUserId);
+		} else {
+			toast("Failed to update user ban status", undefined, undefined, 2000, "danger");
+		}
+		isActioning = false;
+	}
+
+	function handleBanSubmit() {
+		let targetDate: string | null = null;
+		const now = Date.now();
+
+		switch (selectedBanOption) {
+			case "1day":
+				targetDate = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+				break;
+			case "7days":
+				targetDate = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+				break;
+			case "30days":
+				targetDate = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+				break;
+			case "1year":
+				targetDate = new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString();
+				break;
+			case "forever":
+				targetDate = new Date("2999-12-31T23:59:59.999Z").toISOString();
+				break;
+			case "custom":
+				if (!customBanDateTime) {
+					toast("Please select a custom expiration date.", undefined, undefined, 2000, "warning");
+					return;
+				}
+				targetDate = new Date(customBanDateTime).toISOString();
+				break;
+		}
+
+		executeBanUser(targetDate);
+	}
+
 	const statusIcons: Record<string, string> = {
 		pending: "schedule",
 		resolved: "check_circle",
@@ -177,9 +283,6 @@
 	};
 
 	function getContentUrl(report: ModeratorQueueReport): string {
-		if (report.reportType === "short") {
-			return `https://social.davidnet.net/shorts/${report.reportedId}`;
-		}
 		return `https://account.davidnet.net/profile/${report.reportedId}`;
 	}
 </script>
@@ -217,21 +320,28 @@
 					alignItems="center"
 					justifyContent="center"
 					width="100%"
+					gap="medium"
 					marginTop="medium">
 					<Icon icon="verified" size="giant" color="success" />
-					<p style="color: {token.theme.color.text.secondary}">Queue is empty! Great job.</p>
+					<p style="color: {token.theme.color.text.secondary}">Queue is empty!</p>
 				</Flex>
 			{:else}
 				{#each reportsQueue as report (report.id)}
 					<HorizontalCard
 						icon={(statusIcons[report.status] as iconType) || ("help" as iconType)}
-						onclick={() => {
+						onclick={async () => {
 							openReport = report;
 							modalTab = "details";
 							modReason = "";
+							shortVideoUrl = null;
+							currentBanStatus = null;
+							if (report.reportType === "short") {
+								await fetchShortDetails(report.reportedId);
+							}
+							await fetchUserBanStatus(report.reportedUserId);
 						}}
-						title={`[${report.reportType.toUpperCase()}] @${report.reporterUsername}`}
-						description={`Reported: ${formatIsoToPreferred(report.createdAt, true)}`} />
+						title={`[${report.reportType.toUpperCase()}]`}
+						description={`${formatIsoToPreferred(report.createdAt, true)}`} />
 				{/each}
 			{/if}
 		</Flex>
@@ -251,20 +361,30 @@
 				gap="small"
 				marginBottom="medium"
 				style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-				<Tab value="details">Details & Content</Tab>
-				<Tab value="actions">Enforcement Actions</Tab>
+				<Tab value="details">Content</Tab>
+				<Tab value="actions">Actions</Tab>
+				<Tab value="ban">Ban User</Tab>
 			</Flex>
 
 			<!-- 1. DETAILS PANEL -->
 			<TabPanel value="details">
 				<Flex direction="column" gap="medium" width="100%">
-					<div class="iframe-container">
-						<iframe
-							src={getContentUrl(openReport)}
-							title="Reported Content Preview"
-							sandbox="allow-scripts allow-same-origin"
-							loading="lazy">
-						</iframe>
+					<div class="media-container">
+						{#if openReport.reportType === "short" && shortVideoUrl}
+							<video src={shortVideoUrl} controls playsinline class="preview-video"></video>
+						{:else if openReport.reportType === "profile"}
+							<iframe
+								src={getContentUrl(openReport)}
+								title="Reported Content Preview"
+								sandbox="allow-scripts allow-same-origin"
+								loading="lazy">
+							</iframe>
+						{:else}
+							<Flex justifyContent="center" alignItems="center" height="100%" direction="column">
+								<p style="opacity: 0.6;">Loading video preview...</p>
+								<Spinner size="large" />
+							</Flex>
+						{/if}
 					</div>
 
 					<Flex height="fit-content" gap="small" direction="column">
@@ -311,21 +431,24 @@
 						</p>
 						<Flex gap="small">
 							{#if openReport.reportType === "short"}
-								<Button
-									appearance="danger"
-									disabled={isActioning}
-									onclick={() => toggleContentModeration(true)}>
-									Hide Short from Feed
-								</Button>
-								<Button
-									appearance="subtle"
-									disabled={isActioning}
-									onclick={() => toggleContentModeration(false)}>
-									Restore / Unhide Short
-								</Button>
+								{#if !shortIsModerated}
+									<Button
+										appearance="danger"
+										disabled={isActioning}
+										onclick={() => toggleContentModeration(true)}>
+										Moderate short (Hide)
+									</Button>
+								{:else}
+									<Button
+										appearance="subtle"
+										disabled={isActioning}
+										onclick={() => toggleContentModeration(false)}>
+										Unmoderate short (Show)
+									</Button>
+								{/if}
 							{:else if openReport.reportType === "profile"}
 								<Button appearance="danger" disabled={isActioning} onclick={clearProfileUGC}>
-									Clear Profile & Reset Username
+									Clear profile
 								</Button>
 							{/if}
 						</Flex>
@@ -333,23 +456,152 @@
 
 					<!-- Strike / User Enforcement Section -->
 					<div class="action-section">
-						<h4>Issue Violation Strike</h4>
+						<h4>Issue violation</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-							Penalize the user. Add an internal note regarding why this action was taken.
+							Add a note regarding why this violation was issued.
 						</p>
 
-						<Field label="Moderator Note (Internal & User Visible)" name="modReason" required>
+						<Field label="Moderator Note:" name="modReason" required>
 							<TextArea
 								bind:value={modReason}
 								maxlength={1000}
-								placeholder="Explain the violation for future record..."
+								placeholder="Explain the violation..."
 								disabled={isActioning} />
 						</Field>
 
 						<Flex gap="small" marginTop="medium">
 							<Button appearance="danger" disabled={isActioning} onclick={issueViolation}>
-								Issue Strike to User
+								Issue violation
 							</Button>
+						</Flex>
+					</div>
+				</Flex>
+			</TabPanel>
+
+			<!-- 3. BAN MANAGEMENT PANEL -->
+			<TabPanel value="ban">
+				<Flex direction="column" gap="large" width="100%">
+					<div class="action-section">
+						<h4>User Ban Status</h4>
+						{#if currentBanStatus}
+							<p style="font-size: 0.95em; margin-bottom: 12px;">
+								Current State:
+								<strong
+									style="color: {currentBanStatus.isBanned
+										? token.theme.color.text.danger
+										: token.theme.color.text.success}">
+									{currentBanStatus.isBanned
+										? `Banned until ${formatIsoToPreferred(currentBanStatus.bannedUntil!, true)}`
+										: "Active / Not Banned"}
+								</strong>
+							</p>
+						{:else}
+							<p style="font-size: 0.9em; opacity: 0.7;">Loading ban status...</p>
+						{/if}
+
+						<Divider color="tertiary" />
+
+						<h4 style="margin-top: 16px;">Configure Ban Duration</h4>
+						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
+							Select how long this user should be restricted from accessing the platform.
+						</p>
+
+						<!-- Dropdown Selector -->
+						<div style="margin-bottom: 16px;">
+							<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
+								{#snippet trigger()}
+									<Button appearance="subtle" onclick={() => (banDropdownOpen = !banDropdownOpen)}>
+										Duration: {selectedBanOption.toUpperCase()}
+									</Button>
+								{/snippet}
+
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "1day";
+										banDropdownOpen = false;
+									}}>
+									1 Day
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "7days";
+										banDropdownOpen = false;
+									}}>
+									7 Days
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "30days";
+										banDropdownOpen = false;
+									}}>
+									30 Days
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "1year";
+										banDropdownOpen = false;
+									}}>
+									1 Year
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "forever";
+										banDropdownOpen = false;
+									}}>
+									Forever
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={() => {
+										selectedBanOption = "custom";
+										banDropdownOpen = false;
+									}}>
+									Custom
+								</Button>
+							</Dropdown>
+						</div>
+
+						<!-- Custom Date Picker if Custom selected -->
+						{#if selectedBanOption === "custom"}
+							<div style="margin-bottom: 16px;">
+								<Field label="Custom Ban Expiration Date & Time" name="customBanDate">
+									<input
+										type="datetime-local"
+										bind:value={customBanDateTime}
+										class="custom-date-input" />
+								</Field>
+							</div>
+						{/if}
+
+						<Flex gap="small">
+							<Button appearance="danger" disabled={isActioning} onclick={handleBanSubmit}>
+								Apply Ban
+							</Button>
+							{#if currentBanStatus?.isBanned}
+								<Button
+									appearance="subtle"
+									disabled={isActioning}
+									onclick={() => executeBanUser(null)}>
+									Unban
+								</Button>
+							{/if}
 						</Flex>
 					</div>
 				</Flex>
@@ -381,7 +633,7 @@
 {/if}
 
 <style>
-	.iframe-container {
+	.media-container {
 		width: 100%;
 		height: 380px;
 		border-radius: 8px;
@@ -389,11 +641,16 @@
 		background: #000;
 		border: 1px solid rgba(255, 255, 255, 0.12);
 		margin-bottom: 16px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
 
-	iframe {
+	iframe,
+	.preview-video {
 		width: 100%;
 		height: 100%;
+		object-fit: contain;
 		border: none;
 	}
 
@@ -417,5 +674,16 @@
 	.action-section h4 {
 		margin: 0 0 4px 0;
 		font-size: 1.05rem;
+	}
+
+	.custom-date-input {
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 6px;
+		color: white;
+		padding: 10px;
+		font-family: inherit;
+		width: 100%;
+		box-sizing: border-box;
 	}
 </style>
