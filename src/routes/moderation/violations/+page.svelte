@@ -18,10 +18,11 @@
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
-	import type { UserReport } from "$lib/moderationTypes";
-	let myReports = $state<UserReport[]>([]);
+	import type { UserViolation } from "$lib/moderationTypes";
+
+	let myViolations = $state<UserViolation[]>([]);
 	let loading = $state(true);
-	let openReport = $state<UserReport | undefined>(undefined);
+	let openViolation = $state<UserViolation | undefined>(undefined);
 
 	$effect(() => {
 		(async () => {
@@ -40,16 +41,16 @@
 		}
 
 		const res = await getFetch(
-			PUBLIC_BACKEND_URL + "/support/moderation/reports/me",
+			PUBLIC_BACKEND_URL + "/support/moderation/violations/me",
 			undefined,
 			undefined,
 			true
 		);
 
-		if (res && res.reports) {
-			myReports = res.reports;
+		if (res && res.violations) {
+			myViolations = res.violations;
 		} else if (Array.isArray(res)) {
-			myReports = res;
+			myViolations = res;
 		}
 
 		loading = false;
@@ -65,18 +66,12 @@
 		document.addEventListener("visibilitychange", handleVisibilityChange);
 		return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
 	});
-
-	const statusIcons: Record<string, string> = {
-		pending: "schedule",
-		resolved: "check_circle",
-		dismissed: "cancel"
-	};
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Davidnet moderation</h2>
+			<h2>Account Violations</h2>
 			<Button
 				iconbefore="arrow_back"
 				onclick={() => {
@@ -91,108 +86,98 @@
 				<Skeleton height="4rem" width="18rem" />
 				<Skeleton height="4rem" width="18rem" />
 				<Skeleton height="4rem" width="18rem" />
-			{:else if myReports.length === 0}
+			{:else if myViolations.length === 0}
 				<Flex
 					direction="column"
 					alignItems="center"
 					justifyContent="center"
 					width="100%"
 					marginTop="medium">
-					<Icon icon="inbox" size="giant" />
+					<Icon icon="verified" size="giant" color="success" />
 					<p style="color: {token.theme.color.text.secondary}">
-						You have not submitted any reports yet.
+						Your account has a clean record. No violations found.
 					</p>
 				</Flex>
 			{:else}
-				{#each myReports as report (report.id)}
+				{#each myViolations as violation (violation.id)}
 					<HorizontalCard
-						icon={(statusIcons[report.status] as iconType) || ("help" as iconType)}
+						icon={"gavel" as iconType}
 						onclick={() => {
-							openReport = report;
+							openViolation = violation;
 						}}
-						title={report.id}
-						description={`${formatIsoToPreferred(report.updatedAt, true)}`} />
+						title={`Violation: ${violation.reportedType}`}
+						description={`Issued ${formatIsoToPreferred(violation.createdAt, true)}`} />
 				{/each}
 			{/if}
 		</Flex>
 	</Flex>
 </Flex>
 
-{#if openReport}
+{#if openViolation}
 	<Modal
-		title="Report Details"
+		title="Violation Details"
 		onclose={() => {
-			openReport = undefined;
+			openViolation = undefined;
 		}}>
 		<Flex direction="column" gap="medium" width="100%">
 			<!-- Status Badge Header -->
 			<Flex alignItems="center" gap="small" height="fit-content">
-				<Icon icon={(statusIcons[openReport.status] as iconType) || ("help" as iconType)} />
-				<span>
-					Status: {openReport.status}
-				</span>
+				<Icon icon={"gavel" as iconType} color="danger" />
+				<span style="color: {token.theme.color.text.danger}">Action Taken</span>
 			</Flex>
 
-			<!-- Report Details List -->
+			<!-- Violation Details List -->
 			<Flex height="fit-content" gap="small" direction="column">
 				<p>
-					<strong>Report ID:</strong>
-					<span>{openReport.id}</span>
+					<strong>Violation ID:</strong>
+					<span>{openViolation.id}</span>
 				</p>
 				<p>
 					<strong>Type:</strong>
-					{openReport.reportType}
+					{openViolation.reportedType}
 				</p>
 				<p>
 					<strong>Target Content ID:</strong>
-					<span>{openReport.reportedId}</span>
+					<span>{openViolation.reportedId}</span>
 				</p>
 				<p>
-					{#if openReport.status !== "resolved"}
-						{#if openReport.reportType === "short"}
-							<span>
-								<strong>Content:</strong>
-								<Link opennewtab href="https://social.davidnet.net/short/{openReport.reportedId}">
-									View content
-								</Link>.
-							</span>
-						{:else if openReport.reportType === "profile"}
-							<span>
-								<strong>Content:</strong>
-								<Link
-									opennewtab
-									href="https://account.davidnet.net/profile/{openReport.reportedId}">
-									View content
-								</Link>.
-							</span>
-						{:else}
-							<span>
-								<strong>Content:</strong>
-								Report type does not support having a direct link.
-							</span>
-						{/if}
-					{:else}
+					{#if openViolation.reportedType === "short"}
 						<span>
-							<strong>Content:</strong>
-							Content deleted.
+							<strong>Affected Content:</strong>
+							<Link opennewtab href="https://social.davidnet.net/short/{openViolation.reportedId}">
+								View content
+							</Link>
+						</span>
+					{:else if openViolation.reportedType === "profile"}
+						<span>
+							<strong>Affected Content:</strong>
+							<Link
+								opennewtab
+								href="https://account.davidnet.net/profile/{openViolation.reportedId}">
+								View profile
+							</Link>
 						</span>
 					{/if}
 				</p>
 				<p>
-					<strong>Submitted:</strong>
-					{formatIsoToPreferred(openReport.createdAt, true)}
-				</p>
-				<p>
-					<strong>Last Updated:</strong>
-					{formatIsoToPreferred(openReport.updatedAt, true)}
+					<strong>Date Issued:</strong>
+					{formatIsoToPreferred(openViolation.createdAt, true)}
 				</p>
 
 				<Divider color="tertiary" />
 
-				<p><strong>Reason Provided:</strong></p>
+				<p><strong>Reason:</strong></p>
 				<div>
-					{openReport.reason}
+					{openViolation.reason}
 				</div>
+
+				{#if openViolation.moderatorReason}
+					<Divider color="tertiary" />
+					<p><strong>Moderator Note:</strong></p>
+					<div>
+						{openViolation.moderatorReason}
+					</div>
+				{/if}
 			</Flex>
 		</Flex>
 
@@ -200,7 +185,7 @@
 			<Button
 				appearance="primary"
 				onclick={() => {
-					openReport = undefined;
+					openViolation = undefined;
 				}}>
 				Close
 			</Button>
