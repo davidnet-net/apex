@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from "svelte"; // Added onDestroy
+	import { onMount, onDestroy } from "svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		authState,
@@ -55,8 +55,9 @@
 	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
 	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
-	// Interval reference for auto-refresh
+	// Intervals and Listeners references
 	let refreshInterval: ReturnType<typeof setInterval>;
+	let handleVisibilityChange: () => void;
 
 	$effect(() => {
 		const currentFilter = filterStatus;
@@ -67,12 +68,12 @@
 		})();
 	});
 
-	// Setup auto-refresh polling on mount
+	// Setup auto-refresh polling and page visibility listener on mount
 	onMount(() => {
+		// 1. Background polling interval (every 30 seconds)
 		refreshInterval = setInterval(async () => {
 			await whenAuthReady();
 			if (authState.isLoggedIn && !loading) {
-				// Fetch silently in the background without setting loading = true
 				const res = await getFetch(
 					`${PUBLIC_BACKEND_URL}/support/moderation/reports?status=${filterStatus}`,
 					undefined,
@@ -83,11 +84,26 @@
 					reportsQueue = res.reports;
 				}
 			}
-		}, 30000); // Polls every 30 seconds
+		}, 30000);
+
+		// 2. Page visibility refresh handler
+		handleVisibilityChange = async () => {
+			if (document.visibilityState === "visible") {
+				await whenAuthReady();
+				if (authState.isLoggedIn) {
+					loadData(filterStatus);
+				}
+			}
+		};
+
+		document.addEventListener("visibilitychange", handleVisibilityChange);
 	});
 
 	onDestroy(() => {
 		if (refreshInterval) clearInterval(refreshInterval);
+		if (handleVisibilityChange) {
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		}
 	});
 
 	async function loadData(status: string) {
