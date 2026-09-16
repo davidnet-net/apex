@@ -3,8 +3,6 @@
 	import { onMount } from "svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
-		Anchor,
-		appState,
 		authState,
 		Button,
 		Divider,
@@ -12,6 +10,7 @@
 		formatIsoToPreferred,
 		getFetch,
 		Icon,
+		Link,
 		Modal,
 		navigateBack,
 		Skeleton,
@@ -113,7 +112,7 @@
 						onclick={() => {
 							openReport = report;
 						}}
-						title={report.reportType.toUpperCase() + " Report"}
+						title={report.id}
 						description={`${formatIsoToPreferred(report.updatedAt, true)}`} />
 				{/each}
 			{/if}
@@ -154,19 +153,19 @@
 					{#if openReport.status !== "resolved"}
 						{#if openReport.reportType === "short"}
 							<span>
-								Content: <Anchor
+								Content: <Link
 									opennewtab
 									href="https://social.davidnet.net/short/{openReport.reportedId}">
 									View content
-								</Anchor>.
+								</Link>.
 							</span>
 						{:else if openReport.reportType === "profile"}
 							<span>
-								Content: <Anchor
+								Content: <Link
 									opennewtab
 									href="https://account.davidnet.net/profile/{openReport.reportedId}">
 									View content
-								</Anchor>.
+								</Link>.
 							</span>
 						{:else}
 							<span>Content: Report type does not support having a direct link.</span>
@@ -184,7 +183,7 @@
 					{formatIsoToPreferred(openReport.updatedAt, true)}
 				</p>
 
-				<Divider />
+				<Divider color="tertiary" />
 
 				<p><strong>Reason Provided:</strong></p>
 				<div>
