@@ -74,9 +74,14 @@
 		</Flex>
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 			<HorizontalCard
-				title="Reports"
-				description="Reports about your UGC."
+				title="Violations"
+				description="View your violations."
 				icon="person_alert"
+				href="/moderation/violations" />
+			<HorizontalCard
+				title="Reports"
+				description="View your reports."
+				icon="lab_profile"
 				href="/moderation/reports" />
 		</Flex>
 		{#if internalAccessResult?.supportAccess}
