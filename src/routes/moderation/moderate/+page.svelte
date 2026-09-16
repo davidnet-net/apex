@@ -37,7 +37,7 @@
 
 	// Modal State
 	let openReport = $state<ModeratorQueueReport | undefined>(undefined);
-	let modalTab = $state<"details" | "actions" | "ban">("details");
+	let modalTab = $state<"details" | "actions" | "violations" | "ban">("details");
 	let isActioning = $state(false);
 
 	// Track active short moderation status and direct video URL when reviewing a short report
@@ -47,12 +47,12 @@
 	// Form State for actions
 	let modReason = $state("");
 
+	// Violations History State
+	let targetUserViolations = $state<any[]>([]);
+
 	// Ban State
 	let banDropdownOpen = $state(false);
-	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever" | "custom">(
-		"1day"
-	);
-	let customBanDateTime = $state("");
+	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
 	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
 	$effect(() => {
@@ -111,6 +111,20 @@
 		}
 	}
 
+	async function fetchUserViolations(userId: string) {
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/users/${userId}/violations`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			targetUserViolations = res.violations;
+		} else {
+			targetUserViolations = [];
+		}
+	}
+
 	// --- MODERATION ACTIONS ---
 
 	async function updateReportStatus(newStatus: "resolved" | "dismissed" | "pending") {
@@ -125,7 +139,6 @@
 
 		if (res && res.success) {
 			toast(`Reports marked as ${newStatus}`, undefined, undefined, 2000, "success");
-
 			reportsQueue = reportsQueue.map((r) =>
 				r.reportedId === openReport!.reportedId && r.reportType === openReport!.reportType
 					? { ...r, status: newStatus }
@@ -212,6 +225,8 @@
 		if (res && res.success) {
 			toast("Violation strike issued to user", undefined, undefined, 2000, "success");
 			modReason = "";
+			// Refresh violations list
+			await fetchUserViolations(openReport.reportedUserId);
 		} else {
 			toast("Failed to issue violation", undefined, undefined, 2000, "danger");
 		}
@@ -263,13 +278,6 @@
 				break;
 			case "forever":
 				targetDate = new Date("2999-12-31T23:59:59.999Z").toISOString();
-				break;
-			case "custom":
-				if (!customBanDateTime) {
-					toast("Please select a custom expiration date.", undefined, undefined, 2000, "warning");
-					return;
-				}
-				targetDate = new Date(customBanDateTime).toISOString();
 				break;
 		}
 
@@ -335,10 +343,12 @@
 							modReason = "";
 							shortVideoUrl = null;
 							currentBanStatus = null;
+							targetUserViolations = [];
 							if (report.reportType === "short") {
 								await fetchShortDetails(report.reportedId);
 							}
 							await fetchUserBanStatus(report.reportedUserId);
+							await fetchUserViolations(report.reportedUserId);
 						}}
 						title={`[${report.reportType.toUpperCase()}]`}
 						description={`${formatIsoToPreferred(report.createdAt, true)}`} />
@@ -363,6 +373,7 @@
 				style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
 				<Tab value="details">Content</Tab>
 				<Tab value="actions">Actions</Tab>
+				<Tab value="violations">Violations ({targetUserViolations.length})</Tab>
 				<Tab value="ban">Ban User</Tab>
 			</Flex>
 
@@ -478,14 +489,61 @@
 				</Flex>
 			</TabPanel>
 
-			<!-- 3. BAN MANAGEMENT PANEL -->
+			<!-- 3. VIOLATIONS HISTORY PANEL -->
+			<TabPanel value="violations">
+				<Flex direction="column" gap="medium" width="100%">
+					<div class="action-section">
+						<h4>User Violation History</h4>
+						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
+							Previous strikes and violation records associated with this user.
+						</p>
+
+						{#if targetUserViolations.length === 0}
+							<Flex
+								direction="column"
+								alignItems="center"
+								justifyContent="center"
+								width="100%"
+								padding="medium">
+								<Icon icon="verified" size="large" color="success" />
+								<p style="opacity: 0.6; margin-top: 8px;">No previous violations on record.</p>
+							</Flex>
+						{:else}
+							<Flex direction="column" gap="small" maxHeight="320px" overflowY="auto">
+								{#each targetUserViolations as violation (violation.id)}
+									<div class="violation-card">
+										<Flex justifyContent="spaceBetween" alignItems="center">
+											<strong>Type: {violation.reportedType.toUpperCase()}</strong>
+											<span style="font-size: 0.8rem; opacity: 0.7;">
+												{formatIsoToPreferred(violation.createdAt, true)}
+											</span>
+										</Flex>
+										<p style="margin: 6px 0 2px 0; font-size: 0.9rem;">
+											<strong>Original reason:</strong>
+											{violation.reason}
+										</p>
+										{#if violation.moderatorReason}
+											<p style="margin: 2px 0 0 0; font-size: 0.9rem; color: #ffb74d;">
+												<strong>Mod note:</strong>
+												{violation.moderatorReason}
+											</p>
+										{/if}
+									</div>
+								{/each}
+							</Flex>
+						{/if}
+					</div>
+				</Flex>
+			</TabPanel>
+
+			<!-- 4. BAN MANAGEMENT PANEL -->
 			<TabPanel value="ban">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
-						<h4>User Ban Status</h4>
+						<h4>User ban status</h4>
 						{#if currentBanStatus}
 							<p style="font-size: 0.95em; margin-bottom: 12px;">
-								Current State:
+								Current state:
 								<strong
 									style="color: {currentBanStatus.isBanned
 										? token.theme.color.text.danger
@@ -502,9 +560,6 @@
 						<Divider color="tertiary" />
 
 						<h4 style="margin-top: 16px;">Configure Ban Duration</h4>
-						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-							Select how long this user should be restricted from accessing the platform.
-						</p>
 
 						<!-- Dropdown Selector -->
 						<div style="margin-bottom: 16px;">
@@ -565,30 +620,8 @@
 									}}>
 									Forever
 								</Button>
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "custom";
-										banDropdownOpen = false;
-									}}>
-									Custom
-								</Button>
 							</Dropdown>
 						</div>
-
-						<!-- Custom Date Picker if Custom selected -->
-						{#if selectedBanOption === "custom"}
-							<div style="margin-bottom: 16px;">
-								<Field label="Custom Ban Expiration Date & Time" name="customBanDate">
-									<input
-										type="datetime-local"
-										bind:value={customBanDateTime}
-										class="custom-date-input" />
-								</Field>
-							</div>
-						{/if}
 
 						<Flex gap="small">
 							<Button appearance="danger" disabled={isActioning} onclick={handleBanSubmit}>
@@ -676,14 +709,10 @@
 		font-size: 1.05rem;
 	}
 
-	.custom-date-input {
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.2);
+	.violation-card {
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 6px;
-		color: white;
-		padding: 10px;
-		font-family: inherit;
-		width: 100%;
-		box-sizing: border-box;
+		padding: 10px 12px;
 	}
 </style>
