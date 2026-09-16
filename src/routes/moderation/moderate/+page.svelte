@@ -537,6 +537,7 @@
 			</TabPanel>
 
 			<!-- 4. BAN MANAGEMENT PANEL -->
+			<!-- 4. BAN MANAGEMENT PANEL -->
 			<TabPanel value="ban">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
@@ -566,85 +567,75 @@
 							<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
 								{#snippet trigger()}
 									<Button appearance="subtle" onclick={() => (banDropdownOpen = !banDropdownOpen)}>
-										Duration: {selectedBanOption}
+										Duration: {selectedBanOption.toUpperCase()}
 									</Button>
 								{/snippet}
 
-								<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
-									{#snippet trigger()}
-										<Button
-											appearance="subtle"
-											onclick={() => (banDropdownOpen = !banDropdownOpen)}>
-											Duration: {selectedBanOption.toUpperCase()}
-										</Button>
-									{/snippet}
-
-									<Button
-										appearance="subtle"
-										alignContent="left"
-										stretchwidth
-										onclick={(e) => {
-											e.stopPropagation();
-											selectedBanOption = "1day";
-											setTimeout(() => {
-												banDropdownOpen = false;
-											}, 10);
-										}}>
-										1 Day
-									</Button>
-									<Button
-										appearance="subtle"
-										alignContent="left"
-										stretchwidth
-										onclick={(e) => {
-											e.stopPropagation();
-											selectedBanOption = "7days";
-											setTimeout(() => {
-												banDropdownOpen = false;
-											}, 10);
-										}}>
-										7 Days
-									</Button>
-									<Button
-										appearance="subtle"
-										alignContent="left"
-										stretchwidth
-										onclick={(e) => {
-											e.stopPropagation();
-											selectedBanOption = "30days";
-											setTimeout(() => {
-												banDropdownOpen = false;
-											}, 10);
-										}}>
-										30 Days
-									</Button>
-									<Button
-										appearance="subtle"
-										alignContent="left"
-										stretchwidth
-										onclick={(e) => {
-											e.stopPropagation();
-											selectedBanOption = "1year";
-											setTimeout(() => {
-												banDropdownOpen = false;
-											}, 10);
-										}}>
-										1 Year
-									</Button>
-									<Button
-										appearance="subtle"
-										alignContent="left"
-										stretchwidth
-										onclick={(e) => {
-											e.stopPropagation();
-											selectedBanOption = "forever";
-											setTimeout(() => {
-												banDropdownOpen = false;
-											}, 10);
-										}}>
-										Forever
-									</Button>
-								</Dropdown>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedBanOption = "1day";
+										setTimeout(() => {
+											banDropdownOpen = false;
+										}, 10);
+									}}>
+									1 Day
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedBanOption = "7days";
+										setTimeout(() => {
+											banDropdownOpen = false;
+										}, 10);
+									}}>
+									7 Days
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedBanOption = "30days";
+										setTimeout(() => {
+											banDropdownOpen = false;
+										}, 10);
+									}}>
+									30 Days
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedBanOption = "1year";
+										setTimeout(() => {
+											banDropdownOpen = false;
+										}, 10);
+									}}>
+									1 Year
+								</Button>
+								<Button
+									appearance="subtle"
+									alignContent="left"
+									stretchwidth
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedBanOption = "forever";
+										setTimeout(() => {
+											banDropdownOpen = false;
+										}, 10);
+									}}>
+									Forever
+								</Button>
 							</Dropdown>
 						</div>
 
