@@ -90,6 +90,11 @@
 			</Flex>
 			<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 				<HorizontalCard title="Manage reports" icon="balance" href="/moderation/moderate" />
+				<HorizontalCard
+					title="Manage violations"
+					icon="plagiarism"
+					href="/moderation/moderate/violations" />
+				<HorizontalCard title="Manage bans" icon="gavel" href="/moderation/moderate/bans" />
 			</Flex>
 		{/if}
 	</Flex>
