@@ -223,7 +223,7 @@
 		isActioning = true;
 
 		const res = await patchFetch(
-			`${PUBLIC_BACKEND_URL}/profile/${openReport.reportedId}/clear-ugc`,
+			`${PUBLIC_BACKEND_URL}/auth/profile/${openReport.reportedId}/clear-ugc`,
 			{},
 			undefined,
 			true
