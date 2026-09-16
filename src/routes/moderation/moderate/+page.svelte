@@ -570,56 +570,81 @@
 									</Button>
 								{/snippet}
 
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "1day";
-										banDropdownOpen = false;
-									}}>
-									1 Day
-								</Button>
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "7days";
-										banDropdownOpen = false;
-									}}>
-									7 Days
-								</Button>
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "30days";
-										banDropdownOpen = false;
-									}}>
-									30 Days
-								</Button>
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "1year";
-										banDropdownOpen = false;
-									}}>
-									1 Year
-								</Button>
-								<Button
-									appearance="subtle"
-									alignContent="left"
-									stretchwidth
-									onclick={() => {
-										selectedBanOption = "forever";
-										banDropdownOpen = false;
-									}}>
-									Forever
-								</Button>
+								<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
+									{#snippet trigger()}
+										<Button
+											appearance="subtle"
+											onclick={() => (banDropdownOpen = !banDropdownOpen)}>
+											Duration: {selectedBanOption.toUpperCase()}
+										</Button>
+									{/snippet}
+
+									<Button
+										appearance="subtle"
+										alignContent="left"
+										stretchwidth
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedBanOption = "1day";
+											setTimeout(() => {
+												banDropdownOpen = false;
+											}, 10);
+										}}>
+										1 Day
+									</Button>
+									<Button
+										appearance="subtle"
+										alignContent="left"
+										stretchwidth
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedBanOption = "7days";
+											setTimeout(() => {
+												banDropdownOpen = false;
+											}, 10);
+										}}>
+										7 Days
+									</Button>
+									<Button
+										appearance="subtle"
+										alignContent="left"
+										stretchwidth
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedBanOption = "30days";
+											setTimeout(() => {
+												banDropdownOpen = false;
+											}, 10);
+										}}>
+										30 Days
+									</Button>
+									<Button
+										appearance="subtle"
+										alignContent="left"
+										stretchwidth
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedBanOption = "1year";
+											setTimeout(() => {
+												banDropdownOpen = false;
+											}, 10);
+										}}>
+										1 Year
+									</Button>
+									<Button
+										appearance="subtle"
+										alignContent="left"
+										stretchwidth
+										onclick={(e) => {
+											e.stopPropagation();
+											selectedBanOption = "forever";
+											setTimeout(() => {
+												banDropdownOpen = false;
+											}, 10);
+										}}>
+										Forever
+									</Button>
+								</Dropdown>
 							</Dropdown>
 						</div>
 
