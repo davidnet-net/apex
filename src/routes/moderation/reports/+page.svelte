@@ -3,9 +3,11 @@
 	import { onMount } from "svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
+		Anchor,
 		appState,
 		authState,
 		Button,
+		Divider,
 		Flex,
 		formatIsoToPreferred,
 		getFetch,
@@ -13,7 +15,8 @@
 		Modal,
 		navigateBack,
 		Skeleton,
-		whenAuthReady
+		whenAuthReady,
+		type iconType
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
@@ -71,12 +74,6 @@
 		resolved: "check_circle",
 		dismissed: "cancel"
 	};
-
-	const statusColors: Record<string, string> = {
-		pending: token.theme.color.text.warning || "#e6a23c",
-		resolved: token.theme.color.text.success || "#67c23a",
-		dismissed: token.theme.color.text.secondary || "#909399"
-	};
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -112,12 +109,12 @@
 			{:else}
 				{#each myReports as report (report.id)}
 					<HorizontalCard
-						icon={statusIcons[report.status] || "help"}
+						icon={(statusIcons[report.status] as iconType) || ("help" as iconType)}
 						onclick={() => {
 							openReport = report;
 						}}
 						title={report.reportType.toUpperCase() + " Report"}
-						description={`Updated ${formatIsoToPreferred(report.updatedAt, true)}`} />
+						description={`${formatIsoToPreferred(report.updatedAt, true)}`} />
 				{/each}
 			{/if}
 		</Flex>
@@ -132,23 +129,18 @@
 		}}>
 		<Flex direction="column" gap="medium" width="100%">
 			<!-- Status Badge Header -->
-			<Flex alignItems="center" gap="small">
-				<Icon
-					icon={statusIcons[openReport.status] || "help"}
-					style="color: {statusColors[openReport.status] || 'inherit'}" />
-				<span
-					style="font-weight: bold; text-transform: capitalize; color: {statusColors[
-						openReport.status
-					] || 'inherit'}">
+			<Flex alignItems="center" gap="small" height="fit-content">
+				<Icon icon={(statusIcons[openReport.status] as iconType) || ("help" as iconType)} />
+				<span>
 					Status: {openReport.status}
 				</span>
 			</Flex>
 
 			<!-- Report Details List -->
-			<div class="report-details">
+			<Flex height="fit-content" gap="small" direction="column">
 				<p>
 					<strong>Report ID:</strong>
-					<span class="code-text">{openReport.id}</span>
+					<span>{openReport.id}</span>
 				</p>
 				<p>
 					<strong>Type:</strong>
@@ -156,7 +148,32 @@
 				</p>
 				<p>
 					<strong>Target Content ID:</strong>
-					<span class="code-text">{openReport.reportedId}</span>
+					<span>{openReport.reportedId}</span>
+				</p>
+				<p>
+					{#if openReport.status !== "resolved"}
+						{#if openReport.reportType === "short"}
+							<span>
+								Content: <Anchor
+									opennewtab
+									href="https://social.davidnet.net/short/{openReport.reportedId}">
+									View content
+								</Anchor>.
+							</span>
+						{:else if openReport.reportType === "profile"}
+							<span>
+								Content: <Anchor
+									opennewtab
+									href="https://account.davidnet.net/profile/{openReport.reportedId}">
+									View content
+								</Anchor>.
+							</span>
+						{:else}
+							<span>Content: Report type does not support having a direct link.</span>
+						{/if}
+					{:else}
+						<span>Content: Content deleted.</span>
+					{/if}
 				</p>
 				<p>
 					<strong>Submitted:</strong>
@@ -167,13 +184,13 @@
 					{formatIsoToPreferred(openReport.updatedAt, true)}
 				</p>
 
-				<hr class="divider" />
+				<Divider />
 
 				<p><strong>Reason Provided:</strong></p>
-				<div class="reason-box">
+				<div>
 					{openReport.reason}
 				</div>
-			</div>
+			</Flex>
 		</Flex>
 
 		{#snippet actions()}
@@ -187,38 +204,3 @@
 		{/snippet}
 	</Modal>
 {/if}
-
-<style>
-	.report-details {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		font-size: 0.95rem;
-	}
-
-	.report-details p {
-		margin: 0;
-	}
-
-	.code-text {
-		font-family: monospace;
-		font-size: 0.85em;
-		opacity: 0.8;
-	}
-
-	.divider {
-		border: 0;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
-		margin: 12px 0;
-	}
-
-	.reason-box {
-		background: rgba(255, 255, 255, 0.05);
-		border-radius: 6px;
-		padding: 12px;
-		white-space: pre-wrap;
-		word-break: break-word;
-		font-size: 0.9rem;
-		line-height: 1.4;
-	}
-</style>
