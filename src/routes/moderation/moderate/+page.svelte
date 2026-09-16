@@ -372,9 +372,9 @@
 				marginBottom="medium"
 				style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
 				<Tab value="details">Content</Tab>
-				<Tab value="actions">Actions</Tab>
+				<Tab value="actions">Content actions</Tab>
 				<Tab value="violations">Violations ({targetUserViolations.length})</Tab>
-				<Tab value="ban">Ban User</Tab>
+				<Tab value="ban">User actions</Tab>
 			</Flex>
 
 			<!-- 1. DETAILS PANEL -->
@@ -550,7 +550,7 @@
 										: token.theme.color.text.success}">
 									{currentBanStatus.isBanned
 										? `Banned until ${formatIsoToPreferred(currentBanStatus.bannedUntil!, true)}`
-										: "Active / Not Banned"}
+										: "Not Banned"}
 								</strong>
 							</p>
 						{:else}
@@ -566,7 +566,7 @@
 							<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
 								{#snippet trigger()}
 									<Button appearance="subtle" onclick={() => (banDropdownOpen = !banDropdownOpen)}>
-										Duration: {selectedBanOption.toUpperCase()}
+										Duration: {selectedBanOption}
 									</Button>
 								{/snippet}
 
