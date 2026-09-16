@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { onMount, onDestroy } from "svelte"; // Added onDestroy
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		authState,
@@ -55,6 +55,9 @@
 	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
 	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
+	// Interval reference for auto-refresh
+	let refreshInterval: ReturnType<typeof setInterval>;
+
 	$effect(() => {
 		const currentFilter = filterStatus;
 		(async () => {
@@ -62,6 +65,29 @@
 			if (!authState.isLoggedIn && !authState.loading) return;
 			loadData(currentFilter);
 		})();
+	});
+
+	// Setup auto-refresh polling on mount
+	onMount(() => {
+		refreshInterval = setInterval(async () => {
+			await whenAuthReady();
+			if (authState.isLoggedIn && !loading) {
+				// Fetch silently in the background without setting loading = true
+				const res = await getFetch(
+					`${PUBLIC_BACKEND_URL}/support/moderation/reports?status=${filterStatus}`,
+					undefined,
+					undefined,
+					true
+				);
+				if (res && res.reports) {
+					reportsQueue = res.reports;
+				}
+			}
+		}, 30000); // Polls every 30 seconds
+	});
+
+	onDestroy(() => {
+		if (refreshInterval) clearInterval(refreshInterval);
 	});
 
 	async function loadData(status: string) {
@@ -225,7 +251,6 @@
 		if (res && res.success) {
 			toast("Violation strike issued to user", undefined, undefined, 2000, "success");
 			modReason = "";
-			// Refresh violations list
 			await fetchUserViolations(openReport.reportedUserId);
 		} else {
 			toast("Failed to issue violation", undefined, undefined, 2000, "danger");
@@ -282,6 +307,12 @@
 		}
 
 		executeBanUser(targetDate);
+	}
+
+	// Helper to handle closing modal and refreshing list data
+	async function handleCloseModal() {
+		openReport = undefined;
+		await loadData(filterStatus);
 	}
 
 	const statusIcons: Record<string, string> = {
@@ -360,11 +391,7 @@
 
 <!-- Review & Moderation Modal -->
 {#if openReport}
-	<Modal
-		title={`Review ${openReport.reportType.toUpperCase()} Report`}
-		onclose={() => {
-			openReport = undefined;
-		}}>
+	<Modal title={`Review ${openReport.reportType.toUpperCase()} Report`} onclose={handleCloseModal}>
 		<!-- Modal Tabs -->
 		<Tabs bind:selected={modalTab}>
 			<Flex
@@ -537,7 +564,6 @@
 			</TabPanel>
 
 			<!-- 4. BAN MANAGEMENT PANEL -->
-			<!-- 4. BAN MANAGEMENT PANEL -->
 			<TabPanel value="ban">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
@@ -659,7 +685,7 @@
 
 		{#snippet actions()}
 			<Flex gap="small" justifyContent="spaceBetween" width="100%">
-				<Button disabled={isActioning} onclick={() => (openReport = undefined)}>Close</Button>
+				<Button disabled={isActioning} onclick={handleCloseModal}>Close</Button>
 
 				<!-- Right-side queue status actions -->
 				<Flex gap="small">
