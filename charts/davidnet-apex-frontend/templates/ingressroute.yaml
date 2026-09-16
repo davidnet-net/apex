@@ -11,5 +11,4 @@ spec:
       services:
         - name: {{ include "davidnet-apex-frontend.fullname" . }}
           port: {{ .Values.service.port }}
-  tls:
-    secretName: {{ .Values.ingress.host }}-tls
+  tls: {}
