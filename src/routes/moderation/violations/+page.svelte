@@ -144,7 +144,7 @@
 					{#if openViolation.reportedType === "short"}
 						<span>
 							<strong>Affected Content:</strong>
-							<Link opennewtab href="https://social.davidnet.net/short/{openViolation.reportedId}">
+							<Link opennewtab href="https://social.davidnet.net/shorts/{openViolation.reportedId}">
 								View content
 							</Link>
 						</span>

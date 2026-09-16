@@ -110,7 +110,7 @@
 						onclick={() => {
 							openReport = report;
 						}}
-						title={report.id}
+						title={`Report: ${report.reportType}`}
 						description={`${formatIsoToPreferred(report.updatedAt, true)}`} />
 				{/each}
 			{/if}
@@ -152,7 +152,7 @@
 						{#if openReport.reportType === "short"}
 							<span>
 								<strong>Content:</strong>
-								<Link opennewtab href="https://social.davidnet.net/short/{openReport.reportedId}">
+								<Link opennewtab href="https://social.davidnet.net/shorts/{openReport.reportedId}">
 									View content
 								</Link>.
 							</span>
