@@ -23,49 +23,47 @@
 		Field,
 		TextArea,
 		Spinner,
-		Dropdown
+		Dropdown,
+		Anchor
 	} from "@davidnet-net/svelte-ui";
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
 
-	// Importeer het originele type onder een andere naam
 	import type { ModeratorQueueReport as BaseModeratorQueueReport } from "$lib/moderationTypes";
 
-	// Breid het type lokaal uit zodat TypeScript "game" accepteert
 	type ModeratorQueueReport = Omit<BaseModeratorQueueReport, "reportType"> & {
 		reportType: "profile" | "short" | "game";
+		reporterUsername: string;
+		reporterDisplayName?: string;
+		reportedUsername: string;
+		reportedDisplayName?: string;
 	};
 
-	// Data State
 	let reportsQueue = $state<ModeratorQueueReport[]>([]);
 	let loading = $state(true);
 	let filterStatus = $state<"pending" | "resolved" | "dismissed">("pending");
 
-	// Modal State
 	let openReport = $state<ModeratorQueueReport | undefined>(undefined);
-	let modalTab = $state<"details" | "actions" | "violations" | "ban">("details");
+	let modalTab = $state<"details" | "actions" | "violations" | "ban" | "files">("details");
 	let isActioning = $state(false);
 
-	// Track active short moderation status and direct video URL when reviewing a short report
 	let shortIsModerated = $state(false);
 	let shortVideoUrl = $state<string | null>(null);
 
-	// Track game status
 	let gameIsModerated = $state(false);
+	let gameFiles = $state<string[]>([]);
+	let selectedFileContent = $state<string | null>(null);
+	let selectedFilePath = $state<string | null>(null);
+	let loadingFile = $state(false);
 
-	// Form State for actions
 	let modReason = $state("");
-
-	// Violations History State
 	let targetUserViolations = $state<any[]>([]);
 
-	// Ban State
 	let banDropdownOpen = $state(false);
 	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
 	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
-	// Intervals and Listeners references
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let handleVisibilityChange: () => void;
 
@@ -157,6 +155,41 @@
 			gameIsModerated = res.game.isModerated;
 		} else {
 			gameIsModerated = false;
+		}
+
+		const filesRes = await getFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${gameId}/files`,
+			undefined,
+			undefined,
+			true
+		);
+		if (filesRes && filesRes.success) {
+			gameFiles = filesRes.files;
+			if (gameFiles.length > 0) {
+				loadGameFile(gameId, gameFiles[0]);
+			}
+		} else {
+			gameFiles = [];
+		}
+	}
+
+	async function loadGameFile(gameId: string, filePath: string) {
+		selectedFilePath = filePath;
+		loadingFile = true;
+		selectedFileContent = null;
+		try {
+			const response = await fetch(
+				`${PUBLIC_BACKEND_URL}/social/community-games/${gameId}/file/${filePath}`
+			);
+			if (response.ok) {
+				selectedFileContent = await response.text();
+			} else {
+				selectedFileContent = "Failed to load file content.";
+			}
+		} catch (err) {
+			selectedFileContent = "Network error loading file.";
+		} finally {
+			loadingFile = false;
 		}
 	}
 
@@ -371,6 +404,9 @@
 
 	async function handleCloseModal() {
 		openReport = undefined;
+		gameFiles = [];
+		selectedFileContent = null;
+		selectedFilePath = null;
 		await loadData(filterStatus);
 	}
 
@@ -441,8 +477,8 @@
 							await fetchUserBanStatus(report.reportedUserId);
 							await fetchUserViolations(report.reportedUserId);
 						}}
-						title={`[${report.reportType.toUpperCase()}]`}
-						description={`${formatIsoToPreferred(report.createdAt, true)}`} />
+						title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`}
+						description={`Reported by @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, true)}`} />
 				{/each}
 			{/if}
 		</Flex>
@@ -457,6 +493,9 @@
 				marginBottom="medium"
 				style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
 				<Tab value="details">Content</Tab>
+				{#if openReport.reportType === "game"}
+					<Tab value="files">Files & Code</Tab>
+				{/if}
 				<Tab value="actions">Content actions</Tab>
 				<Tab value="violations">Violations ({targetUserViolations.length})</Tab>
 				<Tab value="ban">User actions</Tab>
@@ -504,11 +543,19 @@
 						</p>
 						<p>
 							<strong>Reporter:</strong>
-							@{openReport.reporterUsername}
+							<Anchor
+								href="https://account.davidnet.net/profile/{openReport.reporterUsername}"
+								target="_blank">
+								@{openReport.reporterUsername}
+							</Anchor>
 						</p>
 						<p>
-							<strong>Target User ID:</strong>
-							{openReport.reportedUserId}
+							<strong>Reported User:</strong>
+							<Anchor
+								href="https://account.davidnet.net/profile/{openReport.reportedUsername}"
+								target="_blank">
+								@{openReport.reportedUsername}
+							</Anchor>
 						</p>
 						<p>
 							<strong>Submitted:</strong>
@@ -521,6 +568,54 @@
 					</Flex>
 				</Flex>
 			</TabPanel>
+
+			{#if openReport.reportType === "game"}
+				<TabPanel value="files">
+					<Flex direction="column" gap="medium" width="100%">
+						<div class="action-section">
+							<h4>Uploaded Files Explorer</h4>
+							<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
+								Inspect individual files and source code to check for malicious logic or hidden
+								code.
+							</p>
+
+							{#if gameFiles.length === 0}
+								<p style="opacity: 0.6;">No files found.</p>
+							{:else}
+								<Flex gap="medium" style="align-items: flex-start;">
+									<div class="file-list-sidebar">
+										{#each gameFiles as file}
+											<button
+												class="file-item-btn {selectedFilePath === file ? 'active' : ''}"
+												onclick={() => loadGameFile(openReport!.reportedId, file)}>
+												<Icon icon="description" size="small" />
+												<span>{file}</span>
+											</button>
+										{/each}
+									</div>
+
+									<div class="code-viewer-pane">
+										<div class="code-header">
+											<span>{selectedFilePath || "Select a file"}</span>
+										</div>
+										<div class="code-content">
+											{#if loadingFile}
+												<Flex justifyContent="center" alignItems="center" height="100%">
+													<Spinner size="medium" />
+												</Flex>
+											{:else if selectedFileContent !== null}
+												<pre><code>{selectedFileContent}</code></pre>
+											{:else}
+												<span style="opacity: 0.5;">No content to display.</span>
+											{/if}
+										</div>
+									</div>
+								</Flex>
+							{/if}
+						</div>
+					</Flex>
+				</TabPanel>
+			{/if}
 
 			<TabPanel value="actions">
 				<Flex direction="column" gap="large" width="100%">
@@ -800,6 +895,76 @@
 		height: 100%;
 		object-fit: contain;
 		border: none;
+	}
+
+	.file-list-sidebar {
+		width: 220px;
+		max-height: 350px;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		background: rgba(0, 0, 0, 0.2);
+		padding: 8px;
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
+	.file-item-btn {
+		background: transparent;
+		border: none;
+		color: inherit;
+		text-align: left;
+		padding: 6px 8px;
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 0.85rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		transition: background 0.2s;
+	}
+
+	.file-item-btn:hover {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	.file-item-btn.active {
+		background: rgba(255, 255, 255, 0.12);
+		font-weight: bold;
+	}
+
+	.code-viewer-pane {
+		flex: 1;
+		height: 350px;
+		display: flex;
+		flex-direction: column;
+		background: #0d1117;
+		border-radius: 6px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		overflow: hidden;
+	}
+
+	.code-header {
+		background: rgba(255, 255, 255, 0.04);
+		padding: 8px 12px;
+		font-size: 0.85rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		font-family: monospace;
+		opacity: 0.8;
+	}
+
+	.code-content {
+		flex: 1;
+		padding: 12px;
+		overflow: auto;
+		font-family: monospace;
+		font-size: 0.85rem;
+		line-height: 1.4;
+		white-space: pre;
 	}
 
 	.reason-box {
