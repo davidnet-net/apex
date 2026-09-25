@@ -28,7 +28,14 @@
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
-	import type { ModeratorQueueReport } from "$lib/moderationTypes";
+
+	// Importeer het originele type onder een andere naam
+	import type { ModeratorQueueReport as BaseModeratorQueueReport } from "$lib/moderationTypes";
+
+	// Breid het type lokaal uit zodat TypeScript "game" accepteert
+	type ModeratorQueueReport = Omit<BaseModeratorQueueReport, "reportType"> & {
+		reportType: "profile" | "short" | "game";
+	};
 
 	// Data State
 	let reportsQueue = $state<ModeratorQueueReport[]>([]);
