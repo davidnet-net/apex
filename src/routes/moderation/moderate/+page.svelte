@@ -44,6 +44,9 @@
 	let shortIsModerated = $state(false);
 	let shortVideoUrl = $state<string | null>(null);
 
+	// Track game status
+	let gameIsModerated = $state(false);
+
 	// Form State for actions
 	let modReason = $state("");
 
@@ -68,9 +71,7 @@
 		})();
 	});
 
-	// Setup auto-refresh polling and page visibility listener on mount
 	onMount(() => {
-		// 1. Background polling interval (every 30 seconds)
 		refreshInterval = setInterval(async () => {
 			await whenAuthReady();
 			if (authState.isLoggedIn && !loading) {
@@ -86,7 +87,6 @@
 			}
 		}, 30000);
 
-		// 2. Page visibility refresh handler
 		handleVisibilityChange = async () => {
 			if (document.visibilityState === "visible") {
 				await whenAuthReady();
@@ -139,6 +139,20 @@
 		}
 	}
 
+	async function fetchGameDetails(gameId: string) {
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${gameId}`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success && res.game) {
+			gameIsModerated = res.game.isModerated;
+		} else {
+			gameIsModerated = false;
+		}
+	}
+
 	async function fetchUserBanStatus(userId: string) {
 		const res = await getFetch(
 			`${PUBLIC_BACKEND_URL}/support/moderation/users/${userId}/ban-status`,
@@ -166,8 +180,6 @@
 			targetUserViolations = [];
 		}
 	}
-
-	// --- MODERATION ACTIONS ---
 
 	async function updateReportStatus(newStatus: "resolved" | "dismissed" | "pending") {
 		if (!openReport) return;
@@ -214,6 +226,31 @@
 			);
 		} else {
 			toast("Failed to moderate content", undefined, undefined, 2000, "danger");
+		}
+		isActioning = false;
+	}
+
+	async function toggleGameModeration(hide: boolean) {
+		if (!openReport) return;
+		isActioning = true;
+		const res = await patchFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/moderate`,
+			{ isModerated: hide },
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			gameIsModerated = hide;
+			toast(
+				hide ? "Game hidden from feed" : "Game unmoderated",
+				undefined,
+				undefined,
+				2000,
+				"success"
+			);
+		} else {
+			toast("Failed to moderate game", undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -325,7 +362,6 @@
 		executeBanUser(targetDate);
 	}
 
-	// Helper to handle closing modal and refreshing list data
 	async function handleCloseModal() {
 		openReport = undefined;
 		await loadData(filterStatus);
@@ -355,7 +391,6 @@
 			</Button>
 		</Flex>
 
-		<!-- Main Queue Navigation -->
 		<Tabs bind:selected={filterStatus}>
 			<Flex gap="small" marginBottom="small">
 				<Tab value="pending">Pending</Tab>
@@ -393,6 +428,8 @@
 							targetUserViolations = [];
 							if (report.reportType === "short") {
 								await fetchShortDetails(report.reportedId);
+							} else if (report.reportType === "game") {
+								await fetchGameDetails(report.reportedId);
 							}
 							await fetchUserBanStatus(report.reportedUserId);
 							await fetchUserViolations(report.reportedUserId);
@@ -405,10 +442,8 @@
 	</Flex>
 </Flex>
 
-<!-- Review & Moderation Modal -->
 {#if openReport}
 	<Modal title={`Review ${openReport.reportType.toUpperCase()} Report`} onclose={handleCloseModal}>
-		<!-- Modal Tabs -->
 		<Tabs bind:selected={modalTab}>
 			<Flex
 				gap="small"
@@ -420,7 +455,6 @@
 				<Tab value="ban">User actions</Tab>
 			</Flex>
 
-			<!-- 1. DETAILS PANEL -->
 			<TabPanel value="details">
 				<Flex direction="column" gap="medium" width="100%">
 					<div class="media-container">
@@ -433,9 +467,16 @@
 								sandbox="allow-scripts allow-same-origin"
 								loading="lazy">
 							</iframe>
+						{:else if openReport.reportType === "game"}
+							<iframe
+								src="{PUBLIC_BACKEND_URL}/social/community-games/{openReport.reportedId}/file/index.html"
+								title="Reported Game Preview"
+								sandbox="allow-scripts allow-same-origin"
+								loading="lazy">
+							</iframe>
 						{:else}
 							<Flex justifyContent="center" alignItems="center" height="100%" direction="column">
-								<p style="opacity: 0.6;">Loading video preview...</p>
+								<p style="opacity: 0.6;">Loading preview...</p>
 								<Spinner size="large" />
 							</Flex>
 						{/if}
@@ -474,10 +515,8 @@
 				</Flex>
 			</TabPanel>
 
-			<!-- 2. ENFORCEMENT ACTIONS PANEL -->
 			<TabPanel value="actions">
 				<Flex direction="column" gap="large" width="100%">
-					<!-- Content Moderation Section -->
 					<div class="action-section">
 						<h4>Content Controls</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
@@ -500,6 +539,22 @@
 										Unmoderate short (Show)
 									</Button>
 								{/if}
+							{:else if openReport.reportType === "game"}
+								{#if !gameIsModerated}
+									<Button
+										appearance="danger"
+										disabled={isActioning}
+										onclick={() => toggleGameModeration(true)}>
+										Moderate game (Hide)
+									</Button>
+								{:else}
+									<Button
+										appearance="subtle"
+										disabled={isActioning}
+										onclick={() => toggleGameModeration(false)}>
+										Unmoderate game (Show)
+									</Button>
+								{/if}
 							{:else if openReport.reportType === "profile"}
 								<Button appearance="danger" disabled={isActioning} onclick={clearProfileUGC}>
 									Clear profile
@@ -508,7 +563,6 @@
 						</Flex>
 					</div>
 
-					<!-- Strike / User Enforcement Section -->
 					<div class="action-section">
 						<h4>Issue violation</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
@@ -532,7 +586,6 @@
 				</Flex>
 			</TabPanel>
 
-			<!-- 3. VIOLATIONS HISTORY PANEL -->
 			<TabPanel value="violations">
 				<Flex direction="column" gap="medium" width="100%">
 					<div class="action-section">
@@ -579,7 +632,6 @@
 				</Flex>
 			</TabPanel>
 
-			<!-- 4. BAN MANAGEMENT PANEL -->
 			<TabPanel value="ban">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
@@ -604,7 +656,6 @@
 
 						<h4 style="margin-top: 16px;">Configure Ban Duration</h4>
 
-						<!-- Dropdown Selector -->
 						<div style="margin-bottom: 16px;">
 							<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
 								{#snippet trigger()}
@@ -703,7 +754,6 @@
 			<Flex gap="small" justifyContent="spaceBetween" width="100%">
 				<Button disabled={isActioning} onclick={handleCloseModal}>Close</Button>
 
-				<!-- Right-side queue status actions -->
 				<Flex gap="small">
 					<Button
 						appearance={openReport?.status === "dismissed" ? "primary" : "subtle"}
