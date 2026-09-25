@@ -460,25 +460,27 @@
 				</Flex>
 			{:else}
 				{#each reportsQueue as report (report.id)}
-					<HorizontalCard
-						icon={(statusIcons[report.status] as iconType) || ("help" as iconType)}
-						onclick={async () => {
-							openReport = report;
-							modalTab = "details";
-							modReason = "";
-							shortVideoUrl = null;
-							currentBanStatus = null;
-							targetUserViolations = [];
-							if (report.reportType === "short") {
-								await fetchShortDetails(report.reportedId);
-							} else if (report.reportType === "game") {
-								await fetchGameDetails(report.reportedId);
-							}
-							await fetchUserBanStatus(report.reportedUserId);
-							await fetchUserViolations(report.reportedUserId);
-						}}
-						title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`}
-						description={`Reported by @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, true)}`} />
+					<div class="card-item">
+						<HorizontalCard
+							icon={(statusIcons[report.status] as iconType) || ("help" as iconType)}
+							onclick={async () => {
+								openReport = report;
+								modalTab = "details";
+								modReason = "";
+								shortVideoUrl = null;
+								currentBanStatus = null;
+								targetUserViolations = [];
+								if (report.reportType === "short") {
+									await fetchShortDetails(report.reportedId);
+								} else if (report.reportType === "game") {
+									await fetchGameDetails(report.reportedId);
+								}
+								await fetchUserBanStatus(report.reportedUserId);
+								await fetchUserViolations(report.reportedUserId);
+							}}
+							title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`}
+							description={`By @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, false)}`} />
+					</div>
 				{/each}
 			{/if}
 		</Flex>
@@ -517,7 +519,8 @@
 							<iframe
 								src="{PUBLIC_BACKEND_URL}/social/community-games/{openReport.reportedId}/file/index.html"
 								title="Reported Game Preview"
-								sandbox="allow-scripts allow-same-origin"
+								sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals allow-popups"
+								allow="autoplay; fullscreen"
 								loading="lazy">
 							</iframe>
 						{:else}
@@ -876,6 +879,17 @@
 {/if}
 
 <style>
+	.card-item {
+		width: 320px;
+	}
+
+	.card-item :global(.horizontal-card) {
+		height: auto !important;
+		min-height: 84px !important;
+		overflow: visible !important;
+		padding-bottom: 12px !important;
+	}
+
 	.media-container {
 		width: 100%;
 		height: 380px;
