@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Flex, LinkButton } from "@davidnet-net/svelte-ui";
+	import { Flex } from "@davidnet-net/svelte-ui";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
 </script>
 

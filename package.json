@@ -21,6 +21,7 @@
 		"@sveltejs/kit": "^2.50.2",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@types/bun": "latest",
+		"@types/marked": "^6.0.0",
 		"@types/node": "^24",
 		"@types/ua-parser-js": "^0.7.39",
 		"eslint": "^10.0.3",
@@ -44,9 +45,10 @@
 		]
 	},
 	"dependencies": {
-		"@davidnet-net/svelte-ui": "^2.0.98",
+		"@davidnet-net/svelte-ui": "^2.0.99",
 		"@vanilla-extract/css": "^1.18.0",
 		"@vanilla-extract/recipes": "^0.5.7",
-		"@vanilla-extract/vite-plugin": "^5.1.4"
+		"@vanilla-extract/vite-plugin": "^5.1.4",
+		"marked": "^18.0.14"
 	}
 }
