@@ -67,6 +67,10 @@
 	let refreshInterval: ReturnType<typeof setInterval>;
 	let handleVisibilityChange: () => void;
 
+	// References voor Fullscreen functionaliteit
+	let mediaContainerRef = $state<HTMLDivElement>();
+	let codeViewerRef = $state<HTMLDivElement>();
+
 	$effect(() => {
 		const currentFilter = filterStatus;
 		(async () => {
@@ -410,6 +414,18 @@
 		await loadData(filterStatus);
 	}
 
+	// Handelt native fullscreen af voor media en code bestanden
+	function toggleFullscreen(elem: HTMLElement | undefined) {
+		if (!elem) return;
+		if (!document.fullscreenElement) {
+			elem.requestFullscreen().catch(() => {
+				toast("Error", "Could not enter fullscreen mode", "error", 3000, "danger");
+			});
+		} else {
+			document.exitFullscreen();
+		}
+	}
+
 	const statusIcons: Record<string, string> = {
 		pending: "schedule",
 		resolved: "check_circle",
@@ -505,7 +521,7 @@
 
 			<TabPanel value="details">
 				<Flex direction="column" gap="medium" width="100%">
-					<div class="media-container">
+					<div class="media-container" bind:this={mediaContainerRef}>
 						{#if openReport.reportType === "short" && shortVideoUrl}
 							<video src={shortVideoUrl} controls playsinline class="preview-video"></video>
 						{:else if openReport.reportType === "profile"}
@@ -529,6 +545,13 @@
 								<Spinner size="large" />
 							</Flex>
 						{/if}
+
+						<button
+							class="fullscreen-btn"
+							onclick={() => toggleFullscreen(mediaContainerRef)}
+							title="Toggle Fullscreen">
+							<Icon icon="fullscreen" />
+						</button>
 					</div>
 
 					<Flex height="fit-content" gap="small" direction="column">
@@ -597,9 +620,15 @@
 										{/each}
 									</div>
 
-									<div class="code-viewer-pane">
+									<div class="code-viewer-pane" bind:this={codeViewerRef}>
 										<div class="code-header">
 											<span>{selectedFilePath || "Select a file"}</span>
+											<button
+												class="icon-btn"
+												onclick={() => toggleFullscreen(codeViewerRef)}
+												title="Toggle Fullscreen">
+												<Icon icon="fullscreen" size="small" />
+											</button>
 										</div>
 										<div class="code-content">
 											{#if loadingFile}
@@ -891,6 +920,7 @@
 	}
 
 	.media-container {
+		position: relative;
 		width: 100%;
 		height: 380px;
 		border-radius: 8px;
@@ -901,6 +931,28 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+	}
+
+	/* Nieuwe Fullscreen knop binnen de media container */
+	.fullscreen-btn {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		background: rgba(0, 0, 0, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: white;
+		border-radius: 4px;
+		padding: 6px;
+		cursor: pointer;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.2s;
+	}
+
+	.fullscreen-btn:hover {
+		background: rgba(0, 0, 0, 0.9);
 	}
 
 	iframe,
@@ -962,6 +1014,11 @@
 		overflow: hidden;
 	}
 
+	/* Fix scroll behavior in native fullscreen mode */
+	.code-viewer-pane:fullscreen {
+		padding: 16px;
+	}
+
 	.code-header {
 		background: rgba(255, 255, 255, 0.04);
 		padding: 8px 12px;
@@ -969,6 +1026,27 @@
 		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 		font-family: monospace;
 		opacity: 0.8;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	/* Kleinere transparante knop voor de code header */
+	.icon-btn {
+		background: transparent;
+		border: none;
+		color: inherit;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 4px;
+		border-radius: 4px;
+		transition: background 0.2s;
+	}
+
+	.icon-btn:hover {
+		background: rgba(255, 255, 255, 0.1);
 	}
 
 	.code-content {
