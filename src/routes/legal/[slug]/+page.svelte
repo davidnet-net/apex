@@ -68,7 +68,7 @@
 				<LinkButton href="/legal">All legal files</LinkButton>
 			</Flex>
 		</Flex>
-		<Flex justifyContent="center" alignItems="center" height="fit-content" width="fit-content">
+		<Flex justifyContent="center" alignItems="center" height="fit-content">
 			<article
 				style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; width: 100%; max-width: 800px;">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
