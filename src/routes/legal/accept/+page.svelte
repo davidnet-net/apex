@@ -77,13 +77,15 @@
 			<p
 				style="margin-top: 1rem; margin-bottom: 1.5rem; color: var(--text-color-secondary, #666); text-align: center;">
 				Our legal policies have been updated. Please review the revised policies via the button
-				above and agree to continue using Davidnet.
+				above and agree to continue using Davidnet. You can also instead download and/or delete your
+				data and stop using Davidnet using the button "Manage your data".
 			</p>
 
-			<Flex width="fit-content" marginTop="medium">
+			<Flex width="fit-content" marginTop="medium" height="fit-content" gap="small">
 				<Button onclick={handleAccept} appearance="primary" loading={accepting}>
 					I understand and agree the policies
 				</Button>
+				<LinkButton href="https://account.davidnet.net/manage/data">Manage your data</LinkButton>
 			</Flex>
 		{/if}
 	</Flex>
