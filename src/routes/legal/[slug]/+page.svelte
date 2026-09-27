@@ -68,11 +68,13 @@
 				<LinkButton href="/legal">All legal files</LinkButton>
 			</Flex>
 		</Flex>
-		<article
-			style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; width: 100%; max-width: 800px;">
-			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-			{@html htmlContent}
-		</article>
+		<Flex justifyContent="center" alignItems="center" height="fit-content" width="fit-content">
+			<article
+				style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; width: 100%; max-width: 800px;">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html htmlContent}
+			</article>
+		</Flex>
 	</Flex>
 </Flex>
 
