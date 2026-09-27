@@ -8,7 +8,8 @@
 		postFetch,
 		getFetch,
 		sleep,
-		toast
+		toast,
+		Icon
 	} from "@davidnet-net/svelte-ui";
 
 	let accepting = $state(false);
@@ -60,34 +61,39 @@
 	}
 </script>
 
-<Flex alignItems="center" marginTop="giant" direction="column">
+<!-- Use full viewport height centering so it sits dead-center -->
+<Flex alignItems="center" justifyContent="center" style="min-height: calc(100vh - 100px);">
 	<Flex
-		width="90%"
-		marginTop="giant"
+		width="100%"
+		style="max-width: 600px;"
+		height="fit-content"
 		direction="column"
-		gap="small"
+		gap="medium"
+		justifyContent="center"
 		alignItems="center"
-		justifyContent="center">
+		text="center">
 		{#if checking}
 			<p>Checking status...</p>
 		{:else}
+			<Icon icon="policy_alert" size="giant" />
 			<h2>Accept new legal policies</h2>
-			<LinkButton href="/legal" opennewtab>View policies</LinkButton>
 
 			<p
-				style="margin-top: 1rem; margin-bottom: 1.5rem; color: var(--text-color-secondary, #666); text-align: center;">
+				style="margin-top: 0.5rem; margin-bottom: 1rem; color: var(--text-color-secondary, #999); text-align: center; line-height: 1.5;">
 				Our legal policies have been updated. Please review the revised policies via the button
-				above and agree to continue using Davidnet.
+				below and agree to continue using Davidnet.
 				<br />
-				You can also instead download and/or delete your data and stop using Davidnet using the
-				button "Manage your data".
+				<br />
+				You can also instead download and/or delete your data and stop using Davidnet using the button
+				"Manage your data" below.
 			</p>
 
-			<Flex width="fit-content" marginTop="medium" height="fit-content" gap="small">
-				<Button onclick={handleAccept} appearance="primary" loading={accepting}>
-					I understand and agree the policies
-				</Button>
+			<Flex width="fit-content" height="fit-content" gap="small" wrap>
 				<LinkButton href="https://account.davidnet.net/manage/data">Manage your data</LinkButton>
+				<LinkButton href="/legal" opennewtab>View policies</LinkButton>
+				<Button onclick={handleAccept} appearance="primary" loading={accepting}>
+					I understand and agree to the policies
+				</Button>
 			</Flex>
 		{/if}
 	</Flex>
