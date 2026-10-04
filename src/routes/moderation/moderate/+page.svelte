@@ -3,7 +3,9 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		authState,
+		Avatar,
 		Button,
+		deleteFetch,
 		Divider,
 		Flex,
 		formatIsoToPreferred,
@@ -11,6 +13,8 @@
 		patchFetch,
 		postFetch,
 		Icon,
+		IconButton,
+		Lozenge,
 		Modal,
 		navigateBack,
 		Skeleton,
@@ -22,6 +26,7 @@
 		TabPanel,
 		Field,
 		TextArea,
+		TextField,
 		Spinner,
 		Dropdown,
 		Anchor
@@ -52,10 +57,21 @@
 	let shortVideoUrl = $state<string | null>(null);
 
 	let gameIsModerated = $state(false);
+	let gameDetails = $state<any>(null);
 	let gameFiles = $state<string[]>([]);
 	let selectedFileContent = $state<string | null>(null);
 	let selectedFilePath = $state<string | null>(null);
 	let loadingFile = $state(false);
+
+	// --- Game player data (highscores / saves) - lets a moderator (not just the game's creator)
+	// inspect and act on anti-cheat flags and player data for a reported game. ---
+	let managePlayers = $state<any[]>([]);
+	let isLoadingManagePlayers = $state(false);
+	let editingHighscoreUserId = $state<string | null>(null);
+	let editingHighscoreValue = $state("");
+	let editingSaveUserId = $state<string | null>(null);
+	let editingSaveValue = $state("");
+	let savingManageAction = $state(false);
 
 	let modReason = $state("");
 	let targetUserViolations = $state<any[]>([]);
@@ -157,8 +173,10 @@
 		);
 		if (res && res.success && res.game) {
 			gameIsModerated = res.game.isModerated;
+			gameDetails = res.game;
 		} else {
 			gameIsModerated = false;
+			gameDetails = null;
 		}
 
 		const filesRes = await getFetch(
@@ -175,6 +193,143 @@
 		} else {
 			gameFiles = [];
 		}
+
+		await loadManagePlayers(gameId);
+	}
+
+	async function loadManagePlayers(gameId: string) {
+		isLoadingManagePlayers = true;
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${gameId}/manage/players`,
+			undefined,
+			undefined,
+			true
+		);
+		managePlayers = res && res.success ? res.players : [];
+		isLoadingManagePlayers = false;
+	}
+
+	function startEditHighscore(player: any) {
+		editingHighscoreUserId = player.userId;
+		editingHighscoreValue = String(player.highscore ?? 0);
+	}
+
+	async function confirmEditHighscore(player: any) {
+		if (!openReport) return;
+		const score = Number(editingHighscoreValue);
+		if (!Number.isFinite(score) || score < 0) {
+			toast("Invalid score", "Enter a non-negative number.", "error", 3000, "danger");
+			return;
+		}
+
+		savingManageAction = true;
+		const res = await patchFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/manage/highscores/${player.userId}`,
+			{ score },
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			player.highscore = score;
+			player.highscoreFlagged = false;
+			editingHighscoreUserId = null;
+			toast("Updated", "Highscore updated.", "check_circle", 3000, "success");
+		} else {
+			toast("Error", "Could not update highscore.", "error", 4000, "danger");
+		}
+		savingManageAction = false;
+	}
+
+	async function approveHighscore(player: any) {
+		if (!openReport) return;
+		savingManageAction = true;
+		const res = await postFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/manage/highscores/${player.userId}/approve`,
+			{},
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			player.highscoreFlagged = false;
+			toast(
+				"Approved",
+				"Highscore is now visible on the public leaderboard.",
+				"check_circle",
+				3000,
+				"success"
+			);
+		} else {
+			toast("Error", "Could not approve highscore.", "error", 4000, "danger");
+		}
+		savingManageAction = false;
+	}
+
+	async function deletePlayerHighscore(player: any) {
+		if (!openReport) return;
+		savingManageAction = true;
+		const res = await deleteFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/manage/highscores/${player.userId}`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			player.highscore = null;
+			toast("Deleted", "Highscore deleted.", "delete", 3000, "success");
+		} else {
+			toast("Error", "Could not delete highscore.", "error", 4000, "danger");
+		}
+		savingManageAction = false;
+	}
+
+	function startEditSave(player: any) {
+		editingSaveUserId = player.userId;
+		editingSaveValue = JSON.stringify(player.save ?? {}, null, 2);
+	}
+
+	async function confirmEditSave(player: any) {
+		if (!openReport) return;
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(editingSaveValue);
+		} catch {
+			toast("Invalid JSON", "Fix the JSON before saving.", "error", 4000, "danger");
+			return;
+		}
+
+		savingManageAction = true;
+		const res = await patchFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/manage/saves/${player.userId}`,
+			{ data: parsed },
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			player.save = parsed;
+			editingSaveUserId = null;
+			toast("Updated", "Save data updated.", "check_circle", 3000, "success");
+		} else {
+			toast("Error", "Could not update save data.", "error", 4000, "danger");
+		}
+		savingManageAction = false;
+	}
+
+	async function deletePlayerSave(player: any) {
+		if (!openReport) return;
+		savingManageAction = true;
+		const res = await deleteFetch(
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openReport.reportedId}/manage/saves/${player.userId}`,
+			undefined,
+			undefined,
+			true
+		);
+		if (res && res.success) {
+			player.save = null;
+			toast("Deleted", "Save data deleted.", "delete", 3000, "success");
+		} else {
+			toast("Error", "Could not delete save data.", "error", 4000, "danger");
+		}
+		savingManageAction = false;
 	}
 
 	async function loadGameFile(gameId: string, filePath: string) {
@@ -411,6 +566,10 @@
 		gameFiles = [];
 		selectedFileContent = null;
 		selectedFilePath = null;
+		gameDetails = null;
+		managePlayers = [];
+		editingHighscoreUserId = null;
+		editingSaveUserId = null;
 		await loadData(filterStatus);
 	}
 
@@ -486,6 +645,10 @@
 								shortVideoUrl = null;
 								currentBanStatus = null;
 								targetUserViolations = [];
+								gameDetails = null;
+								managePlayers = [];
+								editingHighscoreUserId = null;
+								editingSaveUserId = null;
 								if (report.reportType === "short") {
 									await fetchShortDetails(report.reportedId);
 								} else if (report.reportType === "game") {
@@ -513,6 +676,7 @@
 				<Tab value="details">Content</Tab>
 				{#if openReport.reportType === "game"}
 					<Tab value="files">Files & Code</Tab>
+					<Tab value="players">Player data</Tab>
 				{/if}
 				<Tab value="actions">Content actions</Tab>
 				<Tab value="violations">Violations ({targetUserViolations.length})</Tab>
@@ -532,10 +696,14 @@
 								loading="lazy">
 							</iframe>
 						{:else if openReport.reportType === "game"}
+							<!-- NEVER add allow-same-origin here: combined with allow-scripts it would hand an
+								 untrusted, possibly malicious game full access to this origin's cookies and
+								 authenticated fetch - i.e. the reviewing MODERATOR's own session - completely
+								 bypassing the postMessage sandbox the player-facing page relies on. -->
 							<iframe
 								src="{PUBLIC_BACKEND_URL}/social/community-games/{openReport.reportedId}/file/index.html"
 								title="Reported Game Preview"
-								sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals allow-popups"
+								sandbox="allow-scripts allow-downloads allow-forms allow-modals allow-popups"
 								allow="autoplay; fullscreen"
 								loading="lazy">
 							</iframe>
@@ -587,6 +755,35 @@
 							<strong>Submitted:</strong>
 							{formatIsoToPreferred(openReport.createdAt, true)}
 						</p>
+
+						{#if openReport.reportType === "game" && gameDetails}
+							<Divider color="tertiary" />
+							<p>
+								<strong>Game title:</strong>
+								{gameDetails.title}
+							</p>
+							{#if gameDetails.description}
+								<p>
+									<strong>Description:</strong>
+									{gameDetails.description}
+								</p>
+							{/if}
+							<Flex gap="small" alignItems="center" flexWrap="wrap">
+								<Lozenge appearance={gameIsModerated ? "danger" : "success"}>
+									{gameIsModerated ? "Hidden from feed" : "Visible on feed"}
+								</Lozenge>
+								{#if gameDetails.isAiGenerated}
+									<Lozenge appearance="discover">AI-generated</Lozenge>
+								{/if}
+								<Lozenge appearance="default">
+									<Icon icon="favorite" size="small" />
+									{gameDetails.likesCount ?? 0}
+								</Lozenge>
+							</Flex>
+							<p style="font-size: 0.85rem; opacity: 0.7;">
+								Uploaded {formatIsoToPreferred(gameDetails.createdAt, true)}
+							</p>
+						{/if}
 
 						<Divider color="tertiary" />
 						<p><strong>Reason for Report:</strong></p>
@@ -642,6 +839,113 @@
 											{/if}
 										</div>
 									</div>
+								</Flex>
+							{/if}
+						</div>
+					</Flex>
+				</TabPanel>
+
+				<TabPanel value="players">
+					<Flex direction="column" gap="medium" width="100%">
+						<div class="action-section">
+							<h4>Player data</h4>
+							<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
+								View, edit or delete any player's save data and highscore for this game -
+								including scores currently flagged by anti-cheat as suspicious.
+							</p>
+
+							{#if isLoadingManagePlayers}
+								<Flex justifyContent="center" alignItems="center" height="120px">
+									<Spinner size="medium" />
+								</Flex>
+							{:else if managePlayers.length === 0}
+								<p style="opacity: 0.6;">No players have submitted a save or highscore yet.</p>
+							{:else}
+								<Flex direction="column" gap="small" maxHeight="420px" overflowY="auto">
+									{#each managePlayers as p (p.userId)}
+										<div class="violation-card">
+											<Flex alignItems="center" gap="small">
+												<Avatar size="small" src={p.avatarUrl} alt={p.username} />
+												<strong>@{p.username}</strong>
+											</Flex>
+
+											<Flex alignItems="center" gap="small" marginTop="small" flexWrap="wrap">
+												<span style="opacity: 0.7;">Highscore:</span>
+												{#if editingHighscoreUserId === p.userId}
+													<TextField bind:value={editingHighscoreValue} type="number" />
+													<IconButton
+														icon="check"
+														tip="Confirm"
+														disabled={savingManageAction}
+														onclick={() => confirmEditHighscore(p)} />
+													<IconButton
+														icon="close"
+														tip="Cancel"
+														onclick={() => (editingHighscoreUserId = null)} />
+												{:else}
+													<strong>{p.highscore ?? "—"}</strong>
+													{#if p.highscoreFlagged}
+														<Lozenge appearance="warning">
+															<span title={p.highscoreFlagReason}>⚠ Flagged</span>
+														</Lozenge>
+														<IconButton
+															icon="check_circle"
+															tip="Approve - show on public leaderboard as-is"
+															disabled={savingManageAction}
+															onclick={() => approveHighscore(p)} />
+													{/if}
+													<IconButton
+														icon="edit"
+														tip="Edit highscore"
+														onclick={() => startEditHighscore(p)} />
+													{#if p.highscore !== null}
+														<IconButton
+															icon="delete"
+															tip="Delete highscore"
+															appearance="danger"
+															disabled={savingManageAction}
+															onclick={() => deletePlayerHighscore(p)} />
+													{/if}
+												{/if}
+											</Flex>
+
+											<Flex direction="column" gap="xsmall" marginTop="small">
+												<Flex alignItems="center" gap="small">
+													<span style="opacity: 0.7;">Save data:</span>
+													<Lozenge appearance={p.save ? "success" : "default"}>
+														{p.save ? "Has save" : "No save"}
+													</Lozenge>
+													{#if editingSaveUserId !== p.userId}
+														<IconButton
+															icon="data_object"
+															tip="View / edit save data"
+															onclick={() => startEditSave(p)} />
+														{#if p.save}
+															<IconButton
+																icon="delete"
+																tip="Delete save data"
+																appearance="danger"
+																disabled={savingManageAction}
+																onclick={() => deletePlayerSave(p)} />
+														{/if}
+													{/if}
+												</Flex>
+
+												{#if editingSaveUserId === p.userId}
+													<TextArea bind:value={editingSaveValue} maxRows={10} />
+													<Flex gap="small">
+														<Button
+															appearance="primary"
+															loading={savingManageAction}
+															onclick={() => confirmEditSave(p)}>
+															Save changes
+														</Button>
+														<Button onclick={() => (editingSaveUserId = null)}>Cancel</Button>
+													</Flex>
+												{/if}
+											</Flex>
+										</div>
+									{/each}
 								</Flex>
 							{/if}
 						</div>
