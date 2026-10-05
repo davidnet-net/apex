@@ -152,11 +152,6 @@
 		}
 	}
 
-	function previewOf(message: string): string {
-		if (message.length <= 15) return message;
-		return message.slice(0, 15).trimEnd() + "...";
-	}
-
 	function stringify(value: unknown): string {
 		try {
 			return JSON.stringify(value, null, 2) ?? "null";
@@ -407,7 +402,7 @@
 								icon="feedback"
 								onclick={() => openEntry(entry)}
 								title={`@${entry.username ?? "deleted-user"}`}
-								description={`${previewOf(entry.data.message)} • ${formatIsoToPreferred(entry.data.timestamp, false)}`} />
+								description={formatIsoToPreferred(entry.data.timestamp, false)} />
 						</div>
 					{/each}
 				{/if}
