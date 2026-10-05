@@ -153,8 +153,8 @@
 	}
 
 	function previewOf(message: string): string {
-		if (message.length <= 80) return message;
-		return message.slice(0, 80).trimEnd() + "...";
+		if (message.length <= 15) return message;
+		return message.slice(0, 15).trimEnd() + "...";
 	}
 
 	function stringify(value: unknown): string {
