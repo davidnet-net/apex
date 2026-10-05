@@ -11,9 +11,11 @@
 		formatIsoToPreferred,
 		getFetch,
 		Icon,
+		identityState,
 		Modal,
 		navigateBack,
 		Skeleton,
+		Spinner,
 		Tab,
 		TabPanel,
 		Tabs,
@@ -24,6 +26,13 @@
 
 	// Mirrors the data shape submitted by svelte-ui's Feedback.svelte widget
 	// (lib_internal/Feedback/Feedback.svelte) - keep these two in sync if that ever changes.
+	interface FeedbackAttachment {
+		key: string;
+		filename: string;
+		contentType: string;
+		size: number;
+	}
+
 	interface FeedbackData {
 		message: string;
 		appState: unknown;
@@ -35,6 +44,7 @@
 		URL: string;
 		userAgent: string;
 		viewport: { width: number; height: number; pixelRatio: number };
+		attachments?: FeedbackAttachment[];
 	}
 
 	interface FeedbackEntry {
@@ -55,7 +65,11 @@
 	let loading = $state(true);
 
 	let openFeedback = $state<FeedbackEntry | undefined>(undefined);
-	let modalTab = $state<"overview" | "technical">("overview");
+	let modalTab = $state<"overview" | "technical" | "attachments">("overview");
+
+	// The attachment endpoint requires a Bearer token (these are private user uploads), so a plain
+	// <img src="..."> can't authenticate - fetch each file manually and hand the UI an object URL.
+	let attachmentObjectUrls = $state<Record<string, string>>({});
 
 	$effect(() => {
 		(async () => {
@@ -107,6 +121,35 @@
 	function openEntry(entry: FeedbackEntry) {
 		openFeedback = entry;
 		modalTab = "overview";
+		for (const attachment of entry.data.attachments ?? []) {
+			loadAttachment(attachment.key);
+		}
+	}
+
+	function closeModal() {
+		for (const url of Object.values(attachmentObjectUrls)) {
+			URL.revokeObjectURL(url);
+		}
+		attachmentObjectUrls = {};
+		openFeedback = undefined;
+	}
+
+	async function loadAttachment(key: string) {
+		if (attachmentObjectUrls[key]) return;
+
+		try {
+			const token = identityState.token?.raw;
+			const response = await fetch(
+				`${PUBLIC_BACKEND_URL}/support/send-feedback/attachment/${key}`,
+				{ headers: token ? { Authorization: `Bearer ${token}` } : {} }
+			);
+			if (!response.ok) return;
+
+			const blob = await response.blob();
+			attachmentObjectUrls = { ...attachmentObjectUrls, [key]: URL.createObjectURL(blob) };
+		} catch (err) {
+			console.error("Failed to load feedback attachment:", err);
+		}
 	}
 
 	function previewOf(message: string): string {
@@ -121,13 +164,18 @@
 			return String(value);
 		}
 	}
+
+	function formatBytes(bytes: number): string {
+		if (!bytes) return "0 KB";
+		const units = ["Bytes", "KB", "MB", "GB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(1024));
+		return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+	}
 </script>
 
 {#if hasModerationAccess}
 	{#if openFeedback}
-		<Modal
-			title={`Feedback from @${openFeedback.username ?? "deleted-user"}`}
-			onclose={() => (openFeedback = undefined)}>
+		<Modal title={`Feedback from @${openFeedback.username ?? "deleted-user"}`} onclose={closeModal}>
 			<Tabs bind:selected={modalTab}>
 				<Flex
 					gap="small"
@@ -135,6 +183,11 @@
 					style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
 					<Tab value="overview">Overview</Tab>
 					<Tab value="technical">Technical details</Tab>
+					{#if openFeedback.data.attachments && openFeedback.data.attachments.length > 0}
+						<Tab value="attachments">
+							Attachments ({openFeedback.data.attachments.length})
+						</Tab>
+					{/if}
 				</Flex>
 
 				<TabPanel value="overview">
@@ -259,11 +312,56 @@
 						</Flex>
 					</Flex>
 				</TabPanel>
+
+				{#if openFeedback.data.attachments && openFeedback.data.attachments.length > 0}
+					<TabPanel value="attachments">
+						<Flex direction="column" gap="large" width="100%">
+							{#each openFeedback.data.attachments as attachment (attachment.key)}
+								<Flex direction="column" gap="xsmall">
+									<Flex justifyContent="spaceBetween" alignItems="center">
+										<span style="font-weight: bold; word-break: break-all;">
+											{attachment.filename}
+										</span>
+										<span style="color: {token.theme.color.text.tertiary}; font-size: 0.85rem;">
+											{formatBytes(attachment.size)}
+										</span>
+									</Flex>
+
+									{#if attachmentObjectUrls[attachment.key]}
+										{#if attachment.contentType.startsWith("image/")}
+											<img
+												src={attachmentObjectUrls[attachment.key]}
+												alt={attachment.filename}
+												style="max-width: 100%; max-height: 400px; border-radius: 8px; object-fit: contain; background: #000;" />
+										{:else if attachment.contentType.startsWith("video/")}
+											<!-- svelte-ignore a11y_media_has_caption -->
+											<video
+												src={attachmentObjectUrls[attachment.key]}
+												controls
+												style="max-width: 100%; max-height: 400px; border-radius: 8px;"></video>
+										{/if}
+										<a
+											href={attachmentObjectUrls[attachment.key]}
+											download={attachment.filename}
+											style="color: {token.theme.color.text.primary}; font-size: 0.85rem;">
+											Download
+										</a>
+									{:else}
+										<Flex alignItems="center" gap="small" style="padding: 24px;">
+											<Spinner size="small" />
+											<span style="color: {token.theme.color.text.tertiary}">Loading...</span>
+										</Flex>
+									{/if}
+								</Flex>
+							{/each}
+						</Flex>
+					</TabPanel>
+				{/if}
 			</Tabs>
 
 			{#snippet actions()}
 				<Flex justifyContent="end">
-					<Button onclick={() => (openFeedback = undefined)}>Close</Button>
+					<Button onclick={closeModal}>Close</Button>
 				</Flex>
 			{/snippet}
 		</Modal>
