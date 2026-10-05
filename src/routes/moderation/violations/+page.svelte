@@ -20,6 +20,7 @@
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
 	import type { UserViolation } from "$lib/moderationTypes";
+	import * as m from "$lib/paraglide/messages.js";
 
 	let myViolations = $state<UserViolation[]>([]);
 	let loading = $state(true);
@@ -72,15 +73,15 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Account Violations</h2>
+			<h2>{m.page_violations_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
-				<LinkButton href="/moderation">Moderation</LinkButton>
+				<LinkButton href="/moderation">{m.page_moderation_link()}</LinkButton>
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack("/help");
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
 			</Flex>
 		</Flex>
@@ -99,7 +100,7 @@
 					marginTop="medium">
 					<Icon icon="verified" size="giant" color="success" />
 					<p style="color: {token.theme.color.text.secondary}">
-						Your account has a clean record. No violations found.
+						{m.page_violations_empty()}
 					</p>
 				</Flex>
 			{:else}
@@ -109,8 +110,8 @@
 						onclick={() => {
 							openViolation = violation;
 						}}
-						title={`Violation: ${violation.reportedType}`}
-						description={`Issued ${formatIsoToPreferred(violation.createdAt, true)}`} />
+						title={m.page_violations_card_title({ type: violation.reportedType })}
+						description={m.page_violations_card_description({ date: formatIsoToPreferred(violation.createdAt, true) })} />
 				{/each}
 			{/if}
 		</Flex>
@@ -119,7 +120,7 @@
 
 {#if openViolation}
 	<Modal
-		title="Violation Details"
+		title={m.page_violations_modal_title()}
 		onclose={() => {
 			openViolation = undefined;
 		}}>
@@ -127,57 +128,57 @@
 			<!-- Status Badge Header -->
 			<Flex alignItems="center" gap="small" height="fit-content">
 				<Icon icon={"gavel" as iconType} color="danger" />
-				<span style="color: {token.theme.color.text.danger}">Action Taken</span>
+				<span style="color: {token.theme.color.text.danger}">{m.page_violations_action_taken()}</span>
 			</Flex>
 
 			<!-- Violation Details List -->
 			<Flex height="fit-content" gap="small" direction="column">
 				<p>
-					<strong>Violation ID:</strong>
+					<strong>{m.page_violations_id_label()}</strong>
 					<span>{openViolation.id}</span>
 				</p>
 				<p>
-					<strong>Type:</strong>
+					<strong>{m.common_label_type()}</strong>
 					{openViolation.reportedType}
 				</p>
 				<p>
-					<strong>Target Content ID:</strong>
+					<strong>{m.common_label_target_content_id()}</strong>
 					<span>{openViolation.reportedId}</span>
 				</p>
 				<p>
 					{#if openViolation.reportedType === "short"}
 						<span>
-							<strong>Affected Content:</strong>
+							<strong>{m.page_violations_affected_content_label()}</strong>
 							<Link opennewtab href="https://social.davidnet.net/shorts/{openViolation.reportedId}">
-								View content
+								{m.common_view_content_link()}
 							</Link>
 						</span>
 					{:else if openViolation.reportedType === "profile"}
 						<span>
-							<strong>Affected Content:</strong>
+							<strong>{m.page_violations_affected_content_label()}</strong>
 							<Link
 								opennewtab
 								href="https://account.davidnet.net/profile/{openViolation.reportedId}">
-								View profile
+								{m.page_violations_view_profile_link()}
 							</Link>
 						</span>
 					{/if}
 				</p>
 				<p>
-					<strong>Date Issued:</strong>
+					<strong>{m.page_violations_date_issued_label()}</strong>
 					{formatIsoToPreferred(openViolation.createdAt, true)}
 				</p>
 
 				<Divider color="tertiary" />
 
-				<p><strong>Reason:</strong></p>
+				<p><strong>{m.common_label_reason()}</strong></p>
 				<div>
 					{openViolation.reason}
 				</div>
 
 				{#if openViolation.moderatorReason}
 					<Divider color="tertiary" />
-					<p><strong>Moderator Note:</strong></p>
+					<p><strong>{m.page_violations_moderator_note_label()}</strong></p>
 					<div>
 						{openViolation.moderatorReason}
 					</div>
@@ -191,7 +192,7 @@
 				onclick={() => {
 					openViolation = undefined;
 				}}>
-				Close
+				{m.common_close()}
 			</Button>
 		{/snippet}
 	</Modal>

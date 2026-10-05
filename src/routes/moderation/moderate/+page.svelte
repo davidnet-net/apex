@@ -34,6 +34,7 @@
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+	import * as m from "$lib/paraglide/messages.js";
 
 	import type { ModeratorQueueReport as BaseModeratorQueueReport } from "$lib/moderationTypes";
 
@@ -245,7 +246,13 @@
 		if (!openReport) return;
 		const score = Number(editingHighscoreValue);
 		if (!Number.isFinite(score) || score < 0) {
-			toast("Invalid score", "Enter a non-negative number.", "error", 3000, "danger");
+			toast(
+				m.page_moderate_toast_invalid_score_title(),
+				m.page_moderate_toast_invalid_score_content(),
+				"error",
+				3000,
+				"danger"
+			);
 			return;
 		}
 
@@ -260,9 +267,21 @@
 			player.highscore = score;
 			player.highscoreFlagged = false;
 			editingHighscoreUserId = null;
-			toast("Updated", "Highscore updated.", "check_circle", 3000, "success");
+			toast(
+				m.page_moderate_toast_highscore_updated_title(),
+				m.page_moderate_toast_highscore_updated_content(),
+				"check_circle",
+				3000,
+				"success"
+			);
 		} else {
-			toast("Error", "Could not update highscore.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_moderate_toast_highscore_update_failed_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		}
 		savingManageAction = false;
 	}
@@ -279,14 +298,20 @@
 		if (res && res.success) {
 			player.highscoreFlagged = false;
 			toast(
-				"Approved",
-				"Highscore is now visible on the public leaderboard.",
+				m.page_moderate_toast_highscore_approved_title(),
+				m.page_moderate_toast_highscore_approved_content(),
 				"check_circle",
 				3000,
 				"success"
 			);
 		} else {
-			toast("Error", "Could not approve highscore.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_moderate_toast_highscore_approve_failed_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		}
 		savingManageAction = false;
 	}
@@ -302,9 +327,21 @@
 		);
 		if (res && res.success) {
 			player.highscore = null;
-			toast("Deleted", "Highscore deleted.", "delete", 3000, "success");
+			toast(
+				m.page_moderate_toast_highscore_deleted_title(),
+				m.page_moderate_toast_highscore_deleted_content(),
+				"delete",
+				3000,
+				"success"
+			);
 		} else {
-			toast("Error", "Could not delete highscore.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_moderate_toast_highscore_delete_failed_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		}
 		savingManageAction = false;
 	}
@@ -320,7 +357,13 @@
 		try {
 			parsed = JSON.parse(editingSaveValue);
 		} catch {
-			toast("Invalid JSON", "Fix the JSON before saving.", "error", 4000, "danger");
+			toast(
+				m.page_moderate_toast_invalid_json_title(),
+				m.page_moderate_toast_invalid_json_content(),
+				"error",
+				4000,
+				"danger"
+			);
 			return;
 		}
 
@@ -334,9 +377,21 @@
 		if (res && res.success) {
 			player.save = parsed;
 			editingSaveUserId = null;
-			toast("Updated", "Save data updated.", "check_circle", 3000, "success");
+			toast(
+				m.page_moderate_toast_highscore_updated_title(),
+				m.page_moderate_toast_save_updated_content(),
+				"check_circle",
+				3000,
+				"success"
+			);
 		} else {
-			toast("Error", "Could not update save data.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_moderate_toast_save_update_failed_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		}
 		savingManageAction = false;
 	}
@@ -352,9 +407,21 @@
 		);
 		if (res && res.success) {
 			player.save = null;
-			toast("Deleted", "Save data deleted.", "delete", 3000, "success");
+			toast(
+				m.page_moderate_toast_highscore_deleted_title(),
+				m.page_moderate_toast_save_deleted_content(),
+				"delete",
+				3000,
+				"success"
+			);
 		} else {
-			toast("Error", "Could not delete save data.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_moderate_toast_save_delete_failed_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		}
 		savingManageAction = false;
 	}
@@ -370,10 +437,10 @@
 			if (response.ok) {
 				selectedFileContent = await response.text();
 			} else {
-				selectedFileContent = "Failed to load file content.";
+				selectedFileContent = m.page_moderate_file_load_failed();
 			}
 		} catch (err) {
-			selectedFileContent = "Network error loading file.";
+			selectedFileContent = m.page_moderate_file_network_error();
 		} finally {
 			loadingFile = false;
 		}
@@ -418,7 +485,7 @@
 		);
 
 		if (res && res.success) {
-			toast(`Reports marked as ${newStatus}`, undefined, undefined, 2000, "success");
+			toast(m.page_moderate_toast_status_updated({ status: newStatus }), undefined, undefined, 2000, "success");
 			reportsQueue = reportsQueue.map((r) =>
 				r.reportedId === openReport!.reportedId && r.reportType === openReport!.reportType
 					? { ...r, status: newStatus }
@@ -426,7 +493,7 @@
 			);
 			openReport.status = newStatus;
 		} else {
-			toast("Failed to update report status", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_status_update_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -444,14 +511,14 @@
 		if (res && res.success) {
 			shortIsModerated = hide;
 			toast(
-				hide ? "Content hidden from feed" : "Content unmoderated",
+				hide ? m.page_moderate_content_hidden() : m.page_moderate_content_unmoderated(),
 				undefined,
 				undefined,
 				2000,
 				"success"
 			);
 		} else {
-			toast("Failed to moderate content", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_moderate_content_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -469,14 +536,14 @@
 		if (res && res.success) {
 			gameIsModerated = hide;
 			toast(
-				hide ? "Game hidden from feed" : "Game unmoderated",
+				hide ? m.page_moderate_game_hidden() : m.page_moderate_game_unmoderated(),
 				undefined,
 				undefined,
 				2000,
 				"success"
 			);
 		} else {
-			toast("Failed to moderate game", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_moderate_game_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -493,9 +560,9 @@
 		);
 
 		if (res && res.success) {
-			toast("Profile UGC cleared", undefined, undefined, 2000, "success");
+			toast(m.page_moderate_toast_ugc_cleared(), undefined, undefined, 2000, "success");
 		} else {
-			toast("Failed to clear profile UGC", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_ugc_clear_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -503,13 +570,7 @@
 	async function issueViolation() {
 		if (!openReport) return;
 		if (!modReason.trim()) {
-			toast(
-				"You must provide a moderator reason for the violation.",
-				undefined,
-				undefined,
-				3000,
-				"warning"
-			);
+			toast(m.page_moderate_toast_reason_required(), undefined, undefined, 3000, "warning");
 			return;
 		}
 
@@ -528,11 +589,11 @@
 		);
 
 		if (res && res.success) {
-			toast("Violation strike issued to user", undefined, undefined, 2000, "success");
+			toast(m.page_moderate_toast_violation_issued(), undefined, undefined, 2000, "success");
 			modReason = "";
 			await fetchUserViolations(openReport.reportedUserId);
 		} else {
-			toast("Failed to issue violation", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_violation_issue_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -550,7 +611,7 @@
 
 		if (res && res.success) {
 			toast(
-				bannedUntil ? "User banned successfully" : "User unbanned successfully",
+				bannedUntil ? m.page_moderate_toast_user_banned() : m.page_moderate_toast_user_unbanned(),
 				undefined,
 				undefined,
 				2000,
@@ -558,7 +619,7 @@
 			);
 			await fetchUserBanStatus(openReport.reportedUserId);
 		} else {
-			toast("Failed to update user ban status", undefined, undefined, 2000, "danger");
+			toast(m.page_moderate_toast_ban_update_failed(), undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
@@ -605,7 +666,7 @@
 		if (!elem) return;
 		if (!document.fullscreenElement) {
 			elem.requestFullscreen().catch(() => {
-				toast("Error", "Could not enter fullscreen mode", "error", 3000, "danger");
+				toast(m.common_error_title(), m.page_moderate_fullscreen_failed(), "error", 3000, "danger");
 			});
 		} else {
 			document.exitFullscreen();
@@ -626,21 +687,21 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>Moderation Queue</h2>
+			<h2>{m.page_moderate_queue_heading()}</h2>
 			<Button
 				iconbefore="arrow_back"
 				onclick={() => {
 					navigateBack("/moderation");
 				}}>
-				Back
+				{m.common_back()}
 			</Button>
 		</Flex>
 
 		<Tabs bind:selected={filterStatus}>
 			<Flex gap="small" marginBottom="small">
-				<Tab value="pending">Pending</Tab>
-				<Tab value="resolved">Resolved</Tab>
-				<Tab value="dismissed">Dismissed</Tab>
+				<Tab value="pending">{m.page_moderate_tab_pending()}</Tab>
+				<Tab value="resolved">{m.page_moderate_tab_resolved()}</Tab>
+				<Tab value="dismissed">{m.page_moderate_tab_dismissed()}</Tab>
 			</Flex>
 		</Tabs>
 
@@ -658,7 +719,7 @@
 					gap="medium"
 					marginTop="medium">
 					<Icon icon="verified" size="giant" color="success" />
-					<p style="color: {token.theme.color.text.secondary}">Queue is empty!</p>
+					<p style="color: {token.theme.color.text.secondary}">{m.page_moderate_queue_empty()}</p>
 				</Flex>
 			{:else}
 				{#each reportsQueue as report (report.id)}
@@ -685,7 +746,7 @@
 								await fetchUserViolations(report.reportedUserId);
 							}}
 							title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`}
-							description={`By @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, false)}`} />
+							description={`${m.page_moderate_report_by_prefix()} @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, false)}`} />
 					</div>
 				{/each}
 			{/if}
@@ -694,20 +755,22 @@
 </Flex>
 
 {#if openReport}
-	<Modal title={`Review ${openReport.reportType.toUpperCase()} Report`} onclose={handleCloseModal}>
+	<Modal
+		title={m.page_moderate_review_report_title({ type: openReport.reportType.toUpperCase() })}
+		onclose={handleCloseModal}>
 		<Tabs bind:selected={modalTab}>
 			<Flex
 				gap="small"
 				marginBottom="medium"
 				style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-				<Tab value="details">Content</Tab>
+				<Tab value="details">{m.page_moderate_tab_content()}</Tab>
 				{#if openReport.reportType === "game"}
-					<Tab value="files">Files & Code</Tab>
-					<Tab value="players">Player data</Tab>
+					<Tab value="files">{m.page_moderate_tab_files()}</Tab>
+					<Tab value="players">{m.page_moderate_tab_players()}</Tab>
 				{/if}
-				<Tab value="actions">Content actions</Tab>
-				<Tab value="violations">Violations ({targetUserViolations.length})</Tab>
-				<Tab value="ban">User actions</Tab>
+				<Tab value="actions">{m.page_moderate_tab_actions()}</Tab>
+				<Tab value="violations">{m.page_moderate_tab_violations({ count: targetUserViolations.length })}</Tab>
+				<Tab value="ban">{m.page_moderate_tab_ban()}</Tab>
 			</Flex>
 
 			<TabPanel value="details">
@@ -718,7 +781,7 @@
 						{:else if openReport.reportType === "profile"}
 							<iframe
 								src={getContentUrl(openReport)}
-								title="Reported Content Preview"
+								title={m.page_moderate_iframe_profile_title()}
 								sandbox="allow-scripts allow-same-origin"
 								loading="lazy">
 							</iframe>
@@ -729,14 +792,14 @@
 								 bypassing the postMessage sandbox the player-facing page relies on. -->
 							<iframe
 								src="{PUBLIC_BACKEND_URL}/social/community-games/{openReport.reportedId}/file/index.html"
-								title="Reported Game Preview"
+								title={m.page_moderate_iframe_game_title()}
 								sandbox="allow-scripts allow-downloads allow-forms allow-modals allow-popups"
 								allow="autoplay; fullscreen"
 								loading="lazy">
 							</iframe>
 						{:else}
 							<Flex justifyContent="center" alignItems="center" height="100%" direction="column">
-								<p style="opacity: 0.6;">Loading preview...</p>
+								<p style="opacity: 0.6;">{m.page_moderate_loading_preview()}</p>
 								<Spinner size="large" />
 							</Flex>
 						{/if}
@@ -744,7 +807,7 @@
 						<button
 							class="fullscreen-btn"
 							onclick={() => toggleFullscreen(mediaContainerRef)}
-							title="Toggle Fullscreen">
+							title={m.page_moderate_toggle_fullscreen()}>
 							<Icon icon="fullscreen" />
 						</button>
 					</div>
@@ -753,21 +816,21 @@
 						<Flex alignItems="center" gap="small" height="fit-content">
 							<Icon icon={(statusIcons[openReport.status] as iconType) || ("help" as iconType)} />
 							<span>
-								<strong>Current Status:</strong>
+								<strong>{m.page_moderate_current_status_label()}</strong>
 								{openReport.status}
 							</span>
 						</Flex>
 
 						<p>
-							<strong>Report ID:</strong>
+							<strong>{m.common_label_report_id()}</strong>
 							{openReport.id}
 						</p>
 						<p>
-							<strong>Content ID:</strong>
+							<strong>{m.page_moderate_content_id_label()}</strong>
 							{openReport.reportedId}
 						</p>
 						<p>
-							<strong>Reporter:</strong>
+							<strong>{m.page_moderate_reporter_label()}</strong>
 							<Anchor
 								href="https://account.davidnet.net/profile/{openReport.reporterUsername}"
 								target="_blank">
@@ -776,7 +839,7 @@
 							<span style="opacity: 0.6;">({openReport.reporterDisplayName})</span>
 						</p>
 						<p>
-							<strong>Reported User:</strong>
+							<strong>{m.page_moderate_reported_user_label()}</strong>
 							<Anchor
 								href="https://account.davidnet.net/profile/{openReport.reportedUsername}"
 								target="_blank">
@@ -785,28 +848,28 @@
 							<span style="opacity: 0.6;">(User ID: {openReport.reportedUserId})</span>
 						</p>
 						<p>
-							<strong>Submitted:</strong>
+							<strong>{m.common_label_submitted()}</strong>
 							{formatIsoToPreferred(openReport.createdAt, true)}
 						</p>
 
 						{#if openReport.reportType === "game" && gameDetails}
 							<Divider color="tertiary" />
 							<p>
-								<strong>Game title:</strong>
+								<strong>{m.page_moderate_game_title_label()}</strong>
 								{gameDetails.title}
 							</p>
 							{#if gameDetails.description}
 								<p>
-									<strong>Description:</strong>
+									<strong>{m.page_moderate_description_label()}</strong>
 									{gameDetails.description}
 								</p>
 							{/if}
 							<Flex gap="small" alignItems="center" flexWrap="wrap">
 								<Lozenge appearance={gameIsModerated ? "danger" : "success"}>
-									{gameIsModerated ? "Hidden from feed" : "Visible on feed"}
+									{gameIsModerated ? m.page_moderate_lozenge_hidden() : m.page_moderate_lozenge_visible()}
 								</Lozenge>
 								{#if gameDetails.isAiGenerated}
-									<Lozenge appearance="discover">AI-generated</Lozenge>
+									<Lozenge appearance="discover">{m.page_moderate_ai_generated()}</Lozenge>
 								{/if}
 								<Lozenge appearance="default">
 									<Icon icon="favorite" size="small" />
@@ -814,12 +877,12 @@
 								</Lozenge>
 							</Flex>
 							<p style="font-size: 0.85rem; opacity: 0.7;">
-								Uploaded {formatIsoToPreferred(gameDetails.createdAt, true)}
+								{m.page_moderate_uploaded_label({ date: formatIsoToPreferred(gameDetails.createdAt, true) })}
 							</p>
 						{/if}
 
 						<Divider color="tertiary" />
-						<p><strong>Reason for Report:</strong></p>
+						<p><strong>{m.page_moderate_reason_for_report_label()}</strong></p>
 						<div class="reason-box">{openReport.reason}</div>
 					</Flex>
 				</Flex>
@@ -829,14 +892,13 @@
 				<TabPanel value="files">
 					<Flex direction="column" gap="medium" width="100%">
 						<div class="action-section">
-							<h4>Uploaded Files Explorer</h4>
+							<h4>{m.page_moderate_files_explorer_heading()}</h4>
 							<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-								Inspect individual files and source code to check for malicious logic or hidden
-								code.
+								{m.page_moderate_files_explorer_description()}
 							</p>
 
 							{#if gameFiles.length === 0}
-								<p style="opacity: 0.6;">No files found.</p>
+								<p style="opacity: 0.6;">{m.page_moderate_no_files()}</p>
 							{:else}
 								<Flex gap="medium" style="align-items: flex-start;">
 									<div class="file-list-sidebar">
@@ -852,11 +914,11 @@
 
 									<div class="code-viewer-pane" bind:this={codeViewerRef}>
 										<div class="code-header">
-											<span>{selectedFilePath || "Select a file"}</span>
+											<span>{selectedFilePath || m.page_moderate_select_a_file()}</span>
 											<button
 												class="icon-btn"
 												onclick={() => toggleFullscreen(codeViewerRef)}
-												title="Toggle Fullscreen">
+												title={m.page_moderate_toggle_fullscreen()}>
 												<Icon icon="fullscreen" size="small" />
 											</button>
 										</div>
@@ -868,7 +930,7 @@
 											{:else if selectedFileContent !== null}
 												<pre><code>{selectedFileContent}</code></pre>
 											{:else}
-												<span style="opacity: 0.5;">No content to display.</span>
+												<span style="opacity: 0.5;">{m.page_moderate_no_content()}</span>
 											{/if}
 										</div>
 									</div>
@@ -881,10 +943,9 @@
 				<TabPanel value="players">
 					<Flex direction="column" gap="medium" width="100%">
 						<div class="action-section">
-							<h4>Player data</h4>
+							<h4>{m.page_moderate_player_data_heading()}</h4>
 							<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-								View, edit or delete any player's save data and highscore for this game -
-								including scores currently flagged by anti-cheat as suspicious.
+								{m.page_moderate_player_data_description()}
 							</p>
 
 							{#if isLoadingManagePlayers}
@@ -892,7 +953,7 @@
 									<Spinner size="medium" />
 								</Flex>
 							{:else if managePlayers.length === 0}
-								<p style="opacity: 0.6;">No players have submitted a save or highscore yet.</p>
+								<p style="opacity: 0.6;">{m.page_moderate_no_players()}</p>
 							{:else}
 								<Flex direction="column" gap="small" maxHeight="420px" overflowY="auto">
 									{#each managePlayers as p (p.userId)}
@@ -903,38 +964,38 @@
 											</Flex>
 
 											<Flex alignItems="center" gap="small" marginTop="small" flexWrap="wrap">
-												<span style="opacity: 0.7;">Highscore:</span>
+												<span style="opacity: 0.7;">{m.page_moderate_highscore_label()}</span>
 												{#if editingHighscoreUserId === p.userId}
 													<TextField bind:value={editingHighscoreValue} type="number" />
 													<IconButton
 														icon="check"
-														tip="Confirm"
+														tip={m.common_confirm()}
 														disabled={savingManageAction}
 														onclick={() => confirmEditHighscore(p)} />
 													<IconButton
 														icon="close"
-														tip="Cancel"
+														tip={m.common_cancel()}
 														onclick={() => (editingHighscoreUserId = null)} />
 												{:else}
 													<strong>{p.highscore ?? "—"}</strong>
 													{#if p.highscoreFlagged}
 														<Lozenge appearance="warning">
-															<span title={p.highscoreFlagReason}>⚠ Flagged</span>
+															<span title={p.highscoreFlagReason}>{m.page_moderate_flagged_badge()}</span>
 														</Lozenge>
 														<IconButton
 															icon="check_circle"
-															tip="Approve - show on public leaderboard as-is"
+															tip={m.page_moderate_approve_highscore_tip()}
 															disabled={savingManageAction}
 															onclick={() => approveHighscore(p)} />
 													{/if}
 													<IconButton
 														icon="edit"
-														tip="Edit highscore"
+														tip={m.page_moderate_edit_highscore_tip()}
 														onclick={() => startEditHighscore(p)} />
 													{#if p.highscore !== null}
 														<IconButton
 															icon="delete"
-															tip="Delete highscore"
+															tip={m.page_moderate_delete_highscore_tip()}
 															appearance="danger"
 															disabled={savingManageAction}
 															onclick={() => deletePlayerHighscore(p)} />
@@ -944,19 +1005,19 @@
 
 											<Flex direction="column" gap="xsmall" marginTop="small">
 												<Flex alignItems="center" gap="small">
-													<span style="opacity: 0.7;">Save data:</span>
+													<span style="opacity: 0.7;">{m.page_moderate_save_data_label()}</span>
 													<Lozenge appearance={p.save ? "success" : "default"}>
-														{p.save ? "Has save" : "No save"}
+														{p.save ? m.page_moderate_has_save() : m.page_moderate_no_save()}
 													</Lozenge>
 													{#if editingSaveUserId !== p.userId}
 														<IconButton
 															icon="data_object"
-															tip="View / edit save data"
+															tip={m.page_moderate_view_edit_save_tip()}
 															onclick={() => startEditSave(p)} />
 														{#if p.save}
 															<IconButton
 																icon="delete"
-																tip="Delete save data"
+																tip={m.page_moderate_delete_save_tip()}
 																appearance="danger"
 																disabled={savingManageAction}
 																onclick={() => deletePlayerSave(p)} />
@@ -971,9 +1032,9 @@
 															appearance="primary"
 															loading={savingManageAction}
 															onclick={() => confirmEditSave(p)}>
-															Save changes
+															{m.common_save_changes()}
 														</Button>
-														<Button onclick={() => (editingSaveUserId = null)}>Cancel</Button>
+														<Button onclick={() => (editingSaveUserId = null)}>{m.common_cancel()}</Button>
 													</Flex>
 												{/if}
 											</Flex>
@@ -989,9 +1050,9 @@
 			<TabPanel value="actions">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
-						<h4>Content Controls</h4>
+						<h4>{m.page_moderate_content_controls_heading()}</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-							Remove or moderate the offending content from the platform.
+							{m.page_moderate_content_controls_description()}
 						</p>
 						<Flex gap="small">
 							{#if openReport.reportType === "short"}
@@ -1000,14 +1061,14 @@
 										appearance="danger"
 										disabled={isActioning}
 										onclick={() => toggleContentModeration(true)}>
-										Moderate short (Hide)
+										{m.page_moderate_moderate_short_button()}
 									</Button>
 								{:else}
 									<Button
 										appearance="subtle"
 										disabled={isActioning}
 										onclick={() => toggleContentModeration(false)}>
-										Unmoderate short (Show)
+										{m.page_moderate_unmoderate_short_button()}
 									</Button>
 								{/if}
 							{:else if openReport.reportType === "game"}
@@ -1016,41 +1077,41 @@
 										appearance="danger"
 										disabled={isActioning}
 										onclick={() => toggleGameModeration(true)}>
-										Moderate game (Hide)
+										{m.page_moderate_moderate_game_button()}
 									</Button>
 								{:else}
 									<Button
 										appearance="subtle"
 										disabled={isActioning}
 										onclick={() => toggleGameModeration(false)}>
-										Unmoderate game (Show)
+										{m.page_moderate_unmoderate_game_button()}
 									</Button>
 								{/if}
 							{:else if openReport.reportType === "profile"}
 								<Button appearance="danger" disabled={isActioning} onclick={clearProfileUGC}>
-									Clear profile
+									{m.page_moderate_clear_profile_button()}
 								</Button>
 							{/if}
 						</Flex>
 					</div>
 
 					<div class="action-section">
-						<h4>Issue violation</h4>
+						<h4>{m.page_moderate_issue_violation()}</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-							Add a note regarding why this violation was issued.
+							{m.page_moderate_issue_violation_description()}
 						</p>
 
-						<Field label="Moderator Note:" name="modReason" required>
+						<Field label={m.page_moderate_moderator_note_label()} name="modReason" required>
 							<TextArea
 								bind:value={modReason}
 								maxlength={1000}
-								placeholder="Explain the violation..."
+								placeholder={m.page_moderate_violation_placeholder()}
 								disabled={isActioning} />
 						</Field>
 
 						<Flex gap="small" marginTop="medium">
 							<Button appearance="danger" disabled={isActioning} onclick={issueViolation}>
-								Issue violation
+								{m.page_moderate_issue_violation()}
 							</Button>
 						</Flex>
 					</div>
@@ -1060,9 +1121,9 @@
 			<TabPanel value="violations">
 				<Flex direction="column" gap="medium" width="100%">
 					<div class="action-section">
-						<h4>User Violation History</h4>
+						<h4>{m.page_moderate_violation_history_heading()}</h4>
 						<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-							Previous strikes and violation records associated with this user.
+							{m.page_moderate_violation_history_description()}
 						</p>
 
 						{#if targetUserViolations.length === 0}
@@ -1073,14 +1134,14 @@
 								width="100%"
 								padding="medium">
 								<Icon icon="verified" size="large" color="success" />
-								<p style="opacity: 0.6; margin-top: 8px;">No previous violations on record.</p>
+								<p style="opacity: 0.6; margin-top: 8px;">{m.page_moderate_no_previous_violations()}</p>
 							</Flex>
 						{:else}
 							<Flex direction="column" gap="small" maxHeight="320px" overflowY="auto">
 								{#each targetUserViolations as violation (violation.id)}
 									<div class="violation-card">
 										<Flex justifyContent="spaceBetween" alignItems="center">
-											<strong>Type: {violation.reportedType.toUpperCase()}</strong>
+											<strong>{m.page_moderate_violation_type_label({ type: violation.reportedType.toUpperCase() })}</strong>
 											<span style="font-size: 0.8rem; opacity: 0.7;">
 												{formatIsoToPreferred(violation.createdAt, true)}
 											</span>
@@ -1092,12 +1153,12 @@
 											{violation.reportedId}
 										</p>
 										<p style="margin: 6px 0 2px 0; font-size: 0.9rem;">
-											<strong>Original reason:</strong>
+											<strong>{m.page_moderate_original_reason_label()}</strong>
 											{violation.reason}
 										</p>
 										{#if violation.moderatorReason}
 											<p style="margin: 2px 0 0 0; font-size: 0.9rem; color: #ffb74d;">
-												<strong>Mod note:</strong>
+												<strong>{m.page_moderate_mod_note_label()}</strong>
 												{violation.moderatorReason}
 											</p>
 										{/if}
@@ -1112,32 +1173,32 @@
 			<TabPanel value="ban">
 				<Flex direction="column" gap="large" width="100%">
 					<div class="action-section">
-						<h4>User ban status</h4>
+						<h4>{m.page_moderate_ban_status_heading()}</h4>
 						{#if currentBanStatus}
 							<p style="font-size: 0.95em; margin-bottom: 12px;">
-								Current state:
+								{m.page_moderate_current_state_label()}
 								<strong
 									style="color: {currentBanStatus.isBanned
 										? token.theme.color.text.danger
 										: token.theme.color.text.success}">
 									{currentBanStatus.isBanned
-										? `Banned until ${formatIsoToPreferred(currentBanStatus.bannedUntil!, true)}`
-										: "Not Banned"}
+										? m.page_moderate_banned_until({ date: formatIsoToPreferred(currentBanStatus.bannedUntil!, true) })
+										: m.page_moderate_not_banned()}
 								</strong>
 							</p>
 						{:else}
-							<p style="font-size: 0.9em; opacity: 0.7;">Loading ban status...</p>
+							<p style="font-size: 0.9em; opacity: 0.7;">{m.page_moderate_loading_ban_status()}</p>
 						{/if}
 
 						<Divider color="tertiary" />
 
-						<h4 style="margin-top: 16px;">Configure Ban Duration</h4>
+						<h4 style="margin-top: 16px;">{m.page_moderate_configure_ban_duration_heading()}</h4>
 
 						<div style="margin-bottom: 16px;">
 							<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
 								{#snippet trigger()}
 									<Button appearance="subtle" onclick={() => (banDropdownOpen = !banDropdownOpen)}>
-										Duration: {selectedBanOption.toUpperCase()}
+										{m.page_moderate_duration_label({ option: selectedBanOption.toUpperCase() })}
 									</Button>
 								{/snippet}
 
@@ -1152,7 +1213,7 @@
 											banDropdownOpen = false;
 										}, 10);
 									}}>
-									1 Day
+									{m.common_ban_option_1day()}
 								</Button>
 								<Button
 									appearance="subtle"
@@ -1165,7 +1226,7 @@
 											banDropdownOpen = false;
 										}, 10);
 									}}>
-									7 Days
+									{m.common_ban_option_7days()}
 								</Button>
 								<Button
 									appearance="subtle"
@@ -1178,7 +1239,7 @@
 											banDropdownOpen = false;
 										}, 10);
 									}}>
-									30 Days
+									{m.common_ban_option_30days()}
 								</Button>
 								<Button
 									appearance="subtle"
@@ -1191,7 +1252,7 @@
 											banDropdownOpen = false;
 										}, 10);
 									}}>
-									1 Year
+									{m.common_ban_option_1year()}
 								</Button>
 								<Button
 									appearance="subtle"
@@ -1204,21 +1265,21 @@
 											banDropdownOpen = false;
 										}, 10);
 									}}>
-									Forever
+									{m.common_ban_option_forever()}
 								</Button>
 							</Dropdown>
 						</div>
 
 						<Flex gap="small">
 							<Button appearance="danger" disabled={isActioning} onclick={handleBanSubmit}>
-								Apply Ban
+								{m.page_moderate_apply_ban_button()}
 							</Button>
 							{#if currentBanStatus?.isBanned}
 								<Button
 									appearance="subtle"
 									disabled={isActioning}
 									onclick={() => executeBanUser(null)}>
-									Unban
+									{m.page_moderate_unban_button()}
 								</Button>
 							{/if}
 						</Flex>
@@ -1229,20 +1290,20 @@
 
 		{#snippet actions()}
 			<Flex gap="small" justifyContent="spaceBetween" width="100%">
-				<Button disabled={isActioning} onclick={handleCloseModal}>Close</Button>
+				<Button disabled={isActioning} onclick={handleCloseModal}>{m.common_close()}</Button>
 
 				<Flex gap="small">
 					<Button
 						appearance={openReport?.status === "dismissed" ? "primary" : "subtle"}
 						disabled={isActioning}
 						onclick={() => updateReportStatus("dismissed")}>
-						Mark Dismissed
+						{m.page_moderate_mark_dismissed_button()}
 					</Button>
 					<Button
 						appearance={openReport?.status === "resolved" ? "primary" : "subtle"}
 						disabled={isActioning}
 						onclick={() => updateReportStatus("resolved")}>
-						Mark Resolved
+						{m.page_moderate_mark_resolved_button()}
 					</Button>
 				</Flex>
 			</Flex>

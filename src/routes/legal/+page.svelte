@@ -2,6 +2,7 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { getFetch, Spinner, Flex, Skeleton, navigateBack, Button } from "@davidnet-net/svelte-ui";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+	import * as m from "$lib/paraglide/messages.js";
 	interface Document {
 		slug: string;
 		content: string;
@@ -36,14 +37,14 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Legal</h2>
+			<h2>{m.page_legal_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack();
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
 			</Flex>
 		</Flex>
@@ -61,9 +62,9 @@
 						icon="quick_reference"
 						href="/legal/{doc.slug}" />
 				{/each}
-				<HorizontalCard title={`Acceptance history`} icon="history" href={`/legal/history`} />
+				<HorizontalCard title={m.page_legal_acceptance_history_title()} icon="history" href={`/legal/history`} />
 				<HorizontalCard
-					title={`Policies history`}
+					title={m.page_legal_policies_history_title()}
 					icon="history"
 					href={`https://github.com/davidnet-net/legal/commits/main/`} />
 			{/if}

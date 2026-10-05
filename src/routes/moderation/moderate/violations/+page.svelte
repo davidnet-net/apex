@@ -15,6 +15,7 @@
 	} from "@davidnet-net/svelte-ui";
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
+	import * as m from "$lib/paraglide/messages.js";
 
 	let violationsList = $state<any[]>([]);
 	let loading = $state(true);
@@ -75,18 +76,18 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>Platform Violation History</h2>
+			<h2>{m.page_platform_violations_heading()}</h2>
 			<Button
 				iconbefore="arrow_back"
 				onclick={() => {
 					navigateBack("/moderation");
 				}}>
-				Back
+				{m.common_back()}
 			</Button>
 		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
-			Overview of all violation strikes issued across all user accounts.
+			{m.page_platform_violations_description()}
 		</p>
 
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap" direction="column">
@@ -103,7 +104,7 @@
 					gap="medium"
 					marginTop="medium">
 					<Icon icon="verified" size="giant" color="success" />
-					<p style="color: {token.theme.color.text.secondary}">No violations.</p>
+					<p style="color: {token.theme.color.text.secondary}">{m.page_platform_violations_empty()}</p>
 				</Flex>
 			{:else}
 				{#each violationsList as violation (violation.id)}
@@ -122,24 +123,23 @@
 							</span>
 						</Flex>
 						<p style="margin: 4px 0; font-size: 0.85rem; opacity: 0.6;">
-							<strong>Violation ID:</strong>
+							<strong>{m.page_platform_violations_violation_id_label()}</strong>
 							{violation.id} |
-							<strong>User ID:</strong>
-							{violation.userId}
+							<strong>{m.common_user_id_label({ id: violation.userId })}</strong>
 						</p>
 						<p style="margin: 4px 0; font-size: 0.9rem;">
-							<strong>Type:</strong>
+							<strong>{m.common_label_type()}</strong>
 							{violation.reportedType.toUpperCase()} |
-							<strong>Target ID:</strong>
+							<strong>{m.page_platform_violations_target_id_label()}</strong>
 							{violation.reportedId}
 						</p>
 						<p style="margin: 4px 0; font-size: 0.9rem;">
-							<strong>Reason:</strong>
+							<strong>{m.common_label_reason()}</strong>
 							{violation.reason}
 						</p>
 						{#if violation.moderatorReason}
 							<p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #ffb74d;">
-								<strong>Mod Note:</strong>
+								<strong>{m.page_platform_violations_mod_note_label()}</strong>
 								{violation.moderatorReason}
 							</p>
 						{/if}

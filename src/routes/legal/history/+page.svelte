@@ -9,6 +9,7 @@
 		LinkButton
 	} from "@davidnet-net/svelte-ui";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+	import * as m from "$lib/paraglide/messages.js";
 
 	interface HistoryRecord {
 		commitHash: string;
@@ -46,16 +47,16 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Legal - Acceptance history</h2>
+			<h2>{m.page_legal_history_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack();
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
-				<LinkButton href="/legal">All legal files</LinkButton>
+				<LinkButton href="/legal">{m.page_legal_all_files_link()}</LinkButton>
 			</Flex>
 		</Flex>
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
@@ -63,12 +64,12 @@
 				<Skeleton height="4rem" width="18rem" />
 				<Skeleton height="4rem" width="18rem" />
 			{:else if history.length === 0}
-				<p>No acceptance records found.</p>
+				<p>{m.page_legal_history_empty()}</p>
 			{:else}
 				{#each history as record}
 					<HorizontalCard
-						title={`Version: ${record.commitHash.substring(0, 7)}`}
-						description={`Accepted on ${new Date(record.acceptedAt).toLocaleDateString()}`}
+						title={m.page_legal_history_version_title({ hash: record.commitHash.substring(0, 7) })}
+						description={m.page_legal_history_accepted_on({ date: new Date(record.acceptedAt).toLocaleDateString() })}
 						icon="history"
 						href={`https://github.com/davidnet-net/legal/tree/${record.commitHash}`} />
 				{/each}

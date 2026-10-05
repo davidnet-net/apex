@@ -11,6 +11,7 @@
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { onMount } from "svelte";
+	import * as m from "$lib/paraglide/messages.js";
 
 	interface InternalAccessResult {
 		userId: string;
@@ -63,49 +64,55 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Davidnet moderation</h2>
+			<h2>{m.page_moderation_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
-				<LinkButton href="/help">Help center</LinkButton>
+				<LinkButton href="/help">{m.page_help_center_link()}</LinkButton>
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack("/help");
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
 			</Flex>
 		</Flex>
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 			<HorizontalCard
-				title="Violations"
-				description="View your violations."
+				title={m.page_moderation_card_violations_title()}
+				description={m.page_moderation_card_violations_description()}
 				icon="person_alert"
 				href="/moderation/violations" />
 			<HorizontalCard
-				title="Reports"
-				description="View your reports."
+				title={m.page_moderation_card_reports_title()}
+				description={m.page_moderation_card_reports_description()}
 				icon="lab_profile"
 				href="/moderation/reports" />
 		</Flex>
 		{#if internalAccessResult?.supportAccess}
 			<Flex justifyContent="spaceBetween" height="fit-content">
-				<h2>Internal</h2>
+				<h2>{m.page_help_internal_heading()}</h2>
 			</Flex>
 			<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
-				<HorizontalCard title="Manage reports" icon="balance" href="/moderation/moderate" />
 				<HorizontalCard
-					title="Manage violations"
+					title={m.page_moderation_card_manage_reports_title()}
+					icon="balance"
+					href="/moderation/moderate" />
+				<HorizontalCard
+					title={m.page_moderation_card_manage_violations_title()}
 					icon="plagiarism"
 					href="/moderation/moderate/violations" />
-				<HorizontalCard title="Manage bans" icon="gavel" href="/moderation/moderate/bans" />
 				<HorizontalCard
-					title="All shorts"
-					description="Browse every short, chronologically."
+					title={m.page_moderation_card_manage_bans_title()}
+					icon="gavel"
+					href="/moderation/moderate/bans" />
+				<HorizontalCard
+					title={m.page_moderation_card_all_shorts_title()}
+					description={m.page_moderation_card_all_shorts_description()}
 					icon="movie"
 					href="/moderation/moderate/shorts" />
 				<HorizontalCard
-					title="All accounts"
-					description="Browse every account, chronologically."
+					title={m.page_moderation_card_all_accounts_title()}
+					description={m.page_moderation_card_all_accounts_description()}
 					icon="group"
 					href="/moderation/moderate/accounts" />
 			</Flex>

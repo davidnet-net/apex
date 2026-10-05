@@ -4,6 +4,7 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { Button, Flex, getFetch, LinkButton, navigateBack } from "@davidnet-net/svelte-ui";
 	import { marked } from "marked";
+	import * as m from "$lib/paraglide/messages.js";
 
 	interface Document {
 		slug: string;
@@ -56,16 +57,16 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Legal</h2>
+			<h2>{m.page_legal_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack();
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
-				<LinkButton href="/legal">All legal files</LinkButton>
+				<LinkButton href="/legal">{m.page_legal_all_files_link()}</LinkButton>
 			</Flex>
 		</Flex>
 		<Flex justifyContent="center" alignItems="center" height="fit-content">

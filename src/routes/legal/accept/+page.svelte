@@ -11,6 +11,7 @@
 		toast,
 		Icon
 	} from "@davidnet-net/svelte-ui";
+	import * as m from "$lib/paraglide/messages.js";
 
 	let accepting = $state(false);
 	let checking = $state(true);
@@ -45,8 +46,8 @@
 				window.location.href = continueUrl;
 			} else {
 				toast(
-					"Action Failed",
-					"Something went wrong while accepting the terms.",
+					m.page_legal_accept_toast_fail_title(),
+					m.page_legal_accept_toast_fail_content(),
 					"error",
 					4000,
 					"danger"
@@ -54,7 +55,13 @@
 			}
 		} catch (err) {
 			console.error("Acceptance error:", err);
-			toast("Error", "Could not process your acceptance.", "error", 4000, "danger");
+			toast(
+				m.common_error_title(),
+				m.page_legal_accept_toast_error_content(),
+				"error",
+				4000,
+				"danger"
+			);
 		} finally {
 			accepting = false;
 		}
@@ -73,26 +80,24 @@
 		alignItems="center"
 		text="center">
 		{#if checking}
-			<p>Checking status...</p>
+			<p>{m.page_legal_accept_checking()}</p>
 		{:else}
 			<Icon icon="policy_alert" size="giant" />
-			<h2>Accept new legal policies</h2>
+			<h2>{m.page_legal_accept_heading()}</h2>
 
 			<p
 				style="margin-top: 0.5rem; margin-bottom: 1rem; color: var(--text-color-secondary, #999); text-align: center; line-height: 1.5;">
-				Our legal policies have been updated. Please review the revised policies via the button
-				below and agree to continue using Davidnet.
+				{m.page_legal_accept_body()}
 				<br />
 				<br />
-				You can also instead download and/or delete your data and stop using Davidnet using the button
-				"Manage your data" below.
+				{m.page_legal_accept_body2()}
 			</p>
 
 			<Flex width="fit-content" height="fit-content" gap="small" wrap>
-				<LinkButton href="https://account.davidnet.net/manage/data">Manage your data</LinkButton>
-				<LinkButton href="/legal" opennewtab>View policies</LinkButton>
+				<LinkButton href="https://account.davidnet.net/manage/data">{m.page_legal_accept_manage_data_button()}</LinkButton>
+				<LinkButton href="/legal" opennewtab>{m.page_legal_accept_view_policies_button()}</LinkButton>
 				<Button onclick={handleAccept} appearance="primary" loading={accepting}>
-					I understand and agree to the policies
+					{m.page_legal_accept_agree_button()}
 				</Button>
 			</Flex>
 		{/if}

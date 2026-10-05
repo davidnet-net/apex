@@ -23,6 +23,7 @@
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+	import * as m from "$lib/paraglide/messages.js";
 
 	// Mirrors the data shape submitted by svelte-ui's Feedback.svelte widget
 	// (lib_internal/Feedback/Feedback.svelte) - keep these two in sync if that ever changes.
@@ -161,7 +162,7 @@
 	}
 
 	function formatBytes(bytes: number): string {
-		if (!bytes) return "0 KB";
+		if (!bytes) return "0 KB"; // Byte-size unit, identical in both locales
 		const units = ["Bytes", "KB", "MB", "GB"];
 		const i = Math.floor(Math.log(bytes) / Math.log(1024));
 		return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
@@ -170,17 +171,19 @@
 
 {#if hasModerationAccess}
 	{#if openFeedback}
-		<Modal title={`Feedback from @${openFeedback.username ?? "deleted-user"}`} onclose={closeModal}>
+		<Modal
+			title={m.page_feedback_modal_title({ username: openFeedback.username ?? m.page_feedback_deleted_user() })}
+			onclose={closeModal}>
 			<Tabs bind:selected={modalTab}>
 				<Flex
 					gap="small"
 					marginBottom="medium"
 					style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-					<Tab value="overview">Overview</Tab>
-					<Tab value="technical">Technical details</Tab>
+					<Tab value="overview">{m.page_feedback_tab_overview()}</Tab>
+					<Tab value="technical">{m.page_feedback_tab_technical()}</Tab>
 					{#if openFeedback.data.attachments && openFeedback.data.attachments.length > 0}
 						<Tab value="attachments">
-							Attachments ({openFeedback.data.attachments.length})
+							{m.page_feedback_tab_attachments({ count: openFeedback.data.attachments.length })}
 						</Tab>
 					{/if}
 				</Flex>
@@ -191,7 +194,7 @@
 							<Avatar
 								size="small"
 								src={openFeedback.avatarUrl ?? ""}
-								alt={openFeedback.username ?? "deleted user"} />
+								alt={openFeedback.username ?? m.page_feedback_avatar_deleted_user_alt()} />
 							{#if openFeedback.username}
 								<Anchor
 									href="https://account.davidnet.net/profile/{openFeedback.username}"
@@ -203,13 +206,13 @@
 								</Anchor>
 							{:else}
 								<span style="color: {token.theme.color.text.tertiary}">
-									Deleted user ({openFeedback.userId})
+									{m.page_feedback_deleted_user_label({ userId: openFeedback.userId })}
 								</span>
 							{/if}
 						</Flex>
 
 						<p style="color: {token.theme.color.text.tertiary}; margin: 0;">
-							Submitted {formatIsoToPreferred(openFeedback.data.timestamp, true)}
+							{m.page_feedback_submitted_prefix({ date: formatIsoToPreferred(openFeedback.data.timestamp, true) })}
 						</p>
 
 						<Divider color="tertiary" />
@@ -221,7 +224,7 @@
 
 						<Flex direction="column" gap="xsmall">
 							<span style="color: {token.theme.color.text.tertiary}; font-size: 0.85rem;">
-								Page URL
+								{m.page_feedback_page_url_label()}
 							</span>
 							<Anchor href={openFeedback.data.URL} target="_blank">
 								{openFeedback.data.URL}
@@ -231,7 +234,7 @@
 						{#if openFeedback.data.referrer}
 							<Flex direction="column" gap="xsmall">
 								<span style="color: {token.theme.color.text.tertiary}; font-size: 0.85rem;">
-									Referrer
+									{m.page_feedback_referrer_label()}
 								</span>
 								<span style="word-break: break-all;">{openFeedback.data.referrer}</span>
 							</Flex>
@@ -242,10 +245,10 @@
 				<TabPanel value="technical">
 					<Flex direction="column" gap="large" width="100%">
 						<Flex direction="column" gap="small">
-							<h4 style="margin: 0;">Browser & viewport</h4>
+							<h4 style="margin: 0;">{m.page_feedback_browser_viewport_heading()}</h4>
 							<Flex direction="column" gap="xsmall">
 								<span style="color: {token.theme.color.text.tertiary}; font-size: 0.85rem;">
-									User agent
+									{m.page_feedback_user_agent_label()}
 								</span>
 								<span style="word-break: break-all; font-family: monospace; font-size: 0.85rem;">
 									{openFeedback.data.userAgent}
@@ -253,17 +256,20 @@
 							</Flex>
 							<Flex direction="column" gap="xsmall">
 								<span style="color: {token.theme.color.text.tertiary}; font-size: 0.85rem;">
-									Viewport
+									{m.page_feedback_viewport_label()}
 								</span>
 								<span>
-									{openFeedback.data.viewport.width} x {openFeedback.data.viewport.height}
-									(pixel ratio {openFeedback.data.viewport.pixelRatio})
+									{m.page_feedback_viewport_dimensions({
+										width: openFeedback.data.viewport.width,
+										height: openFeedback.data.viewport.height,
+										ratio: openFeedback.data.viewport.pixelRatio
+									})}
 								</span>
 							</Flex>
 						</Flex>
 
 						<Flex direction="column" gap="small">
-							<h4 style="margin: 0;">Build info</h4>
+							<h4 style="margin: 0;">{m.page_feedback_build_info_heading()}</h4>
 							<div class="json-box">
 								<CodeSnippet
 									code={stringify(openFeedback.data.DDS_INFO)}
@@ -273,7 +279,7 @@
 						</Flex>
 
 						<Flex direction="column" gap="small">
-							<h4 style="margin: 0;">App state snapshot</h4>
+							<h4 style="margin: 0;">{m.page_feedback_app_state_heading()}</h4>
 							<div class="json-box">
 								<CodeSnippet
 									code={stringify(openFeedback.data.appState)}
@@ -283,7 +289,7 @@
 						</Flex>
 
 						<Flex direction="column" gap="small">
-							<h4 style="margin: 0;">Auth state snapshot</h4>
+							<h4 style="margin: 0;">{m.page_feedback_auth_state_heading()}</h4>
 							<div class="json-box">
 								<CodeSnippet
 									code={stringify(openFeedback.data.authState)}
@@ -293,10 +299,9 @@
 						</Flex>
 
 						<Flex direction="column" gap="small">
-							<h4 style="margin: 0;">Identity snapshot</h4>
+							<h4 style="margin: 0;">{m.page_feedback_identity_heading()}</h4>
 							<p style="font-size: 0.85em; opacity: 0.7; margin: 0;">
-								Token raw value is already stripped before submission - this is everything else
-								the client had in identity state.
+								{m.page_feedback_identity_note()}
 							</p>
 							<div class="json-box">
 								<CodeSnippet
@@ -339,12 +344,12 @@
 											href={attachmentObjectUrls[attachment.key]}
 											download={attachment.filename}
 											style="color: {token.theme.color.text.primary}; font-size: 0.85rem;">
-											Download
+											{m.page_feedback_download_link()}
 										</a>
 									{:else}
 										<Flex alignItems="center" gap="small" style="padding: 24px;">
 											<Spinner size="small" />
-											<span style="color: {token.theme.color.text.tertiary}">Loading...</span>
+											<span style="color: {token.theme.color.text.tertiary}">{m.page_feedback_loading()}</span>
 										</Flex>
 									{/if}
 								</Flex>
@@ -356,7 +361,7 @@
 
 			{#snippet actions()}
 				<Flex justifyContent="end">
-					<Button onclick={closeModal}>Close</Button>
+					<Button onclick={closeModal}>{m.common_close()}</Button>
 				</Flex>
 			{/snippet}
 		</Modal>
@@ -365,18 +370,18 @@
 	<Flex alignItems="center" marginTop="giant" direction="column">
 		<Flex width="90%" marginTop="giant" direction="column" gap="small">
 			<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-				<h2>Feedback</h2>
+				<h2>{m.page_feedback_heading()}</h2>
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack("/help");
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
 			</Flex>
 
 			<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
-				Feedback submitted by users across the platform, newest first.
+				{m.page_feedback_description()}
 			</p>
 
 			<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
@@ -393,7 +398,7 @@
 						gap="medium"
 						marginTop="medium">
 						<Icon icon="verified" size="giant" color="success" />
-						<p style="color: {token.theme.color.text.secondary}">No feedback submitted yet.</p>
+						<p style="color: {token.theme.color.text.secondary}">{m.page_feedback_empty()}</p>
 					</Flex>
 				{:else}
 					{#each feedbackList as entry (entry.feedbackId)}
@@ -401,7 +406,7 @@
 							<HorizontalCard
 								icon="feedback"
 								onclick={() => openEntry(entry)}
-								title={`@${entry.username ?? "deleted-user"}`}
+								title={`@${entry.username ?? m.page_feedback_deleted_user()}`}
 								description={formatIsoToPreferred(entry.data.timestamp, false)} />
 						</div>
 					{/each}

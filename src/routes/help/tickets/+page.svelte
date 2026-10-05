@@ -1,1 +1,5 @@
-Please mail us instead for now on contact@davidnet.net
+<script lang="ts">
+	import * as m from "$lib/paraglide/messages.js";
+</script>
+
+{m.page_help_tickets_notice()}

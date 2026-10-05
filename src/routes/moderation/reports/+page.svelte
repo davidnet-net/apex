@@ -20,6 +20,7 @@
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
 	import type { UserReport } from "$lib/moderationTypes";
+	import * as m from "$lib/paraglide/messages.js";
 	let myReports = $state<UserReport[]>([]);
 	let loading = $state(true);
 	let openReport = $state<UserReport | undefined>(undefined);
@@ -77,15 +78,15 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
-			<h2>Davidnet moderation</h2>
+			<h2>{m.page_moderation_heading()}</h2>
 			<Flex width="fit-content" height="fit-content" gap="small">
-				<LinkButton href="/moderation">Moderation</LinkButton>
+				<LinkButton href="/moderation">{m.page_moderation_link()}</LinkButton>
 				<Button
 					iconbefore="arrow_back"
 					onclick={() => {
 						navigateBack("/help");
 					}}>
-					Back
+					{m.common_back()}
 				</Button>
 			</Flex>
 		</Flex>
@@ -104,7 +105,7 @@
 					marginTop="medium">
 					<Icon icon="inbox" size="giant" />
 					<p style="color: {token.theme.color.text.secondary}">
-						You have not submitted any reports yet.
+						{m.page_reports_empty()}
 					</p>
 				</Flex>
 			{:else}
@@ -114,7 +115,7 @@
 						onclick={() => {
 							openReport = report;
 						}}
-						title={`Report: ${report.reportType}`}
+						title={m.page_reports_card_title({ type: report.reportType })}
 						description={`${formatIsoToPreferred(report.updatedAt, true)}`} />
 				{/each}
 			{/if}
@@ -124,7 +125,7 @@
 
 {#if openReport}
 	<Modal
-		title="Report Details"
+		title={m.page_reports_modal_title()}
 		onclose={() => {
 			openReport = undefined;
 		}}>
@@ -133,67 +134,67 @@
 			<Flex alignItems="center" gap="small" height="fit-content">
 				<Icon icon={(statusIcons[openReport.status] as iconType) || ("help" as iconType)} />
 				<span>
-					Status: {openReport.status}
+					{m.page_reports_status_label({ status: openReport.status })}
 				</span>
 			</Flex>
 
 			<!-- Report Details List -->
 			<Flex height="fit-content" gap="small" direction="column">
 				<p>
-					<strong>Report ID:</strong>
+					<strong>{m.common_label_report_id()}</strong>
 					<span>{openReport.id}</span>
 				</p>
 				<p>
-					<strong>Type:</strong>
+					<strong>{m.common_label_type()}</strong>
 					{openReport.reportType}
 				</p>
 				<p>
-					<strong>Target Content ID:</strong>
+					<strong>{m.page_reports_target_content_id_label()}</strong>
 					<span>{openReport.reportedId}</span>
 				</p>
 				<p>
 					{#if openReport.status !== "resolved"}
 						{#if openReport.reportType === "short"}
 							<span>
-								<strong>Content:</strong>
+								<strong>{m.page_reports_content_label()}</strong>
 								<Link opennewtab href="https://social.davidnet.net/shorts/{openReport.reportedId}">
-									View content
+									{m.common_view_content_link()}
 								</Link>.
 							</span>
 						{:else if openReport.reportType === "profile"}
 							<span>
-								<strong>Content:</strong>
+								<strong>{m.page_reports_content_label()}</strong>
 								<Link
 									opennewtab
 									href="https://account.davidnet.net/profile/{openReport.reportedId}">
-									View content
+									{m.common_view_content_link()}
 								</Link>.
 							</span>
 						{:else}
 							<span>
-								<strong>Content:</strong>
-								Report type does not support having a direct link.
+								<strong>{m.page_reports_content_label()}</strong>
+								{m.page_reports_no_direct_link()}
 							</span>
 						{/if}
 					{:else}
 						<span>
-							<strong>Content:</strong>
-							Content deleted.
+							<strong>{m.page_reports_content_label()}</strong>
+							{m.page_reports_content_deleted()}
 						</span>
 					{/if}
 				</p>
 				<p>
-					<strong>Submitted:</strong>
+					<strong>{m.common_label_submitted()}</strong>
 					{formatIsoToPreferred(openReport.createdAt, true)}
 				</p>
 				<p>
-					<strong>Last Updated:</strong>
+					<strong>{m.page_reports_last_updated_label()}</strong>
 					{formatIsoToPreferred(openReport.updatedAt, true)}
 				</p>
 
 				<Divider color="tertiary" />
 
-				<p><strong>Reason Provided:</strong></p>
+				<p><strong>{m.page_reports_reason_label()}</strong></p>
 				<div>
 					{openReport.reason}
 				</div>
@@ -206,7 +207,7 @@
 				onclick={() => {
 					openReport = undefined;
 				}}>
-				Close
+				{m.common_close()}
 			</Button>
 		{/snippet}
 	</Modal>

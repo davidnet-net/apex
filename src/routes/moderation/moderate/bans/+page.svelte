@@ -23,6 +23,7 @@
 	} from "@davidnet-net/svelte-ui";
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
+	import * as m from "$lib/paraglide/messages.js";
 
 	let bannedUsersList = $state<any[]>([]);
 	let loading = $state(true);
@@ -102,17 +103,17 @@
 		);
 
 		if (res && res.success) {
-			toast("User ban lifted successfully", undefined, undefined, 2000, "success");
+			toast(m.page_bans_toast_unban_success(), undefined, undefined, 2000, "success");
 			await loadBannedUsers();
 		} else {
-			toast("Failed to lift user ban", undefined, undefined, 2000, "danger");
+			toast(m.page_bans_toast_unban_failed(), undefined, undefined, 2000, "danger");
 		}
 		isSubmitting = false;
 	}
 
 	async function handleManualBanSubmit() {
 		if (!targetUserIdInput.trim()) {
-			toast("Please enter a valid target User ID.", undefined, undefined, 2500, "warning");
+			toast(m.page_bans_toast_invalid_target(), undefined, undefined, 2500, "warning");
 			return;
 		}
 
@@ -146,11 +147,11 @@
 		);
 
 		if (res && res.success) {
-			toast("User banned successfully", undefined, undefined, 2000, "success");
+			toast(m.page_moderate_toast_user_banned(), undefined, undefined, 2000, "success");
 			targetUserIdInput = "";
 			await loadBannedUsers();
 		} else {
-			toast("Failed to apply ban", undefined, undefined, 2000, "danger");
+			toast(m.page_bans_toast_ban_failed(), undefined, undefined, 2000, "danger");
 		}
 		isSubmitting = false;
 	}
@@ -159,28 +160,28 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="medium">
 		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>Ban management</h2>
+			<h2>{m.page_bans_heading()}</h2>
 			<Button
 				iconbefore="arrow_back"
 				onclick={() => {
 					navigateBack("/moderation");
 				}}>
-				Back
+				{m.common_back()}
 			</Button>
 		</Flex>
 
 		<!-- Manual Ban Issuer Section -->
 		<div class="action-section">
-			<h4>Issue Manual Ban</h4>
+			<h4>{m.page_bans_issue_manual_heading()}</h4>
 			<p style="font-size: 0.9em; opacity: 0.7; margin-bottom: 12px;">
-				Directly ban a user account by entering their id and selecting a duration.
+				{m.page_bans_issue_manual_description()}
 			</p>
 
 			<Flex direction="column" gap="small">
-				<Field label="Target User ID" name="targetUserId" required>
+				<Field label={m.page_bans_target_user_id_label()} name="targetUserId" required>
 					<TextField
 						bind:value={targetUserIdInput}
-						placeholder="uuid here"
+						placeholder={m.page_bans_target_user_id_placeholder()}
 						disabled={isSubmitting} />
 				</Field>
 
@@ -189,7 +190,7 @@
 					<Dropdown isOpen={banDropdownOpen} placement="bottom-start">
 						{#snippet trigger()}
 							<Button appearance="subtle" onclick={() => (banDropdownOpen = !banDropdownOpen)}>
-								Duration: {selectedBanOption.toUpperCase()}
+								{m.page_moderate_duration_label({ option: selectedBanOption.toUpperCase() })}
 							</Button>
 						{/snippet}
 
@@ -204,7 +205,7 @@
 									banDropdownOpen = false;
 								}, 10);
 							}}>
-							1 Day
+							{m.common_ban_option_1day()}
 						</Button>
 						<Button
 							appearance="subtle"
@@ -217,7 +218,7 @@
 									banDropdownOpen = false;
 								}, 10);
 							}}>
-							7 Days
+							{m.common_ban_option_7days()}
 						</Button>
 						<Button
 							appearance="subtle"
@@ -230,7 +231,7 @@
 									banDropdownOpen = false;
 								}, 10);
 							}}>
-							30 Days
+							{m.common_ban_option_30days()}
 						</Button>
 						<Button
 							appearance="subtle"
@@ -243,7 +244,7 @@
 									banDropdownOpen = false;
 								}, 10);
 							}}>
-							1 Year
+							{m.common_ban_option_1year()}
 						</Button>
 						<Button
 							appearance="subtle"
@@ -256,14 +257,14 @@
 									banDropdownOpen = false;
 								}, 10);
 							}}>
-							Forever
+							{m.common_ban_option_forever()}
 						</Button>
 					</Dropdown>
 				</div>
 
 				<Flex gap="small">
 					<Button appearance="danger" disabled={isSubmitting} onclick={handleManualBanSubmit}>
-						Apply Ban to User
+						{m.page_bans_apply_button()}
 					</Button>
 				</Flex>
 			</Flex>
@@ -271,7 +272,7 @@
 
 		<Divider color="tertiary" />
 
-		<h3>Active Bans List</h3>
+		<h3>{m.page_bans_active_list_heading()}</h3>
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap" direction="column">
 			{#if loading}
 				<Skeleton height="4rem" width="100%" />
@@ -285,7 +286,7 @@
 					gap="medium"
 					marginTop="medium">
 					<Icon icon="verified" size="giant" color="success" />
-					<p style="color: {token.theme.color.text.secondary}">No active bans.</p>
+					<p style="color: {token.theme.color.text.secondary}">{m.page_bans_empty()}</p>
 				</Flex>
 			{:else}
 				{#each bannedUsersList as userRecord (userRecord.userId)}
@@ -300,10 +301,10 @@
 										@{userRecord.username} ({userRecord.displayName})
 									</Anchor>
 									<p style="margin: 2px 0 0 0; font-size: 0.8rem; opacity: 0.7;">
-										User ID: {userRecord.userId}
+										{m.common_user_id_label({ id: userRecord.userId })}
 									</p>
 									<p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #ff5252;">
-										Banned until: {formatIsoToPreferred(userRecord.bannedUntil, true)}
+										{m.page_bans_banned_until_label({ date: formatIsoToPreferred(userRecord.bannedUntil, true) })}
 									</p>
 								</div>
 							</Flex>
@@ -311,7 +312,7 @@
 								appearance="subtle"
 								disabled={isSubmitting}
 								onclick={() => executeUnban(userRecord.userId)}>
-								Lift Ban (Unban)
+								{m.page_bans_lift_button()}
 							</Button>
 						</Flex>
 					</div>
