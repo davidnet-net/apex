@@ -98,6 +98,16 @@
 					icon="plagiarism"
 					href="/moderation/moderate/violations" />
 				<HorizontalCard title="Manage bans" icon="gavel" href="/moderation/moderate/bans" />
+				<HorizontalCard
+					title="All shorts"
+					description="Browse every short, chronologically."
+					icon="movie"
+					href="/moderation/moderate/shorts" />
+				<HorizontalCard
+					title="All accounts"
+					description="Browse every account, chronologically."
+					icon="group"
+					href="/moderation/moderate/accounts" />
 			</Flex>
 		{/if}
 	</Flex>

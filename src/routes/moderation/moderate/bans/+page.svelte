@@ -2,7 +2,9 @@
 	import { onMount } from "svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
+		Anchor,
 		authState,
+		Avatar,
 		Button,
 		Divider,
 		Flex,
@@ -64,6 +66,13 @@
 	$effect(() => {
 		if (!hasModerationAccess) return;
 		loadBannedUsers();
+	});
+
+	onMount(() => {
+		const prefillUserId = new URLSearchParams(window.location.search).get("userId");
+		if (prefillUserId) {
+			targetUserIdInput = prefillUserId;
+		}
 	});
 
 	async function loadBannedUsers() {
@@ -282,12 +291,22 @@
 				{#each bannedUsersList as userRecord (userRecord.userId)}
 					<div class="violation-row-card">
 						<Flex justifyContent="spaceBetween" alignItems="center">
-							<div>
-								<strong>User ID: {userRecord.userId}</strong>
-								<p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #ff5252;">
-									Banned until: {formatIsoToPreferred(userRecord.bannedUntil, true)}
-								</p>
-							</div>
+							<Flex alignItems="center" gap="small">
+								<Avatar size="small" src={userRecord.avatarUrl ?? ""} alt={userRecord.username} />
+								<div>
+									<Anchor
+										href="https://account.davidnet.net/profile/{userRecord.username}"
+										target="_blank">
+										@{userRecord.username} ({userRecord.displayName})
+									</Anchor>
+									<p style="margin: 2px 0 0 0; font-size: 0.8rem; opacity: 0.7;">
+										User ID: {userRecord.userId}
+									</p>
+									<p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #ff5252;">
+										Banned until: {formatIsoToPreferred(userRecord.bannedUntil, true)}
+									</p>
+								</div>
+							</Flex>
 							<Button
 								appearance="subtle"
 								disabled={isSubmitting}

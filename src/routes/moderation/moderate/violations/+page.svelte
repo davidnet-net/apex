@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
+		Anchor,
 		authState,
+		Avatar,
 		Button,
 		Flex,
 		formatIsoToPreferred,
@@ -107,11 +109,24 @@
 				{#each violationsList as violation (violation.id)}
 					<div class="violation-row-card">
 						<Flex justifyContent="spaceBetween" alignItems="center" marginBottom="small">
-							<strong>User ID: {violation.userId}</strong>
+							<Flex alignItems="center" gap="small">
+								<Avatar size="small" src={violation.avatarUrl ?? ""} alt={violation.username} />
+								<Anchor
+									href="https://account.davidnet.net/profile/{violation.username}"
+									target="_blank">
+									@{violation.username} ({violation.displayName})
+								</Anchor>
+							</Flex>
 							<span style="font-size: 0.85rem; opacity: 0.7;">
 								{formatIsoToPreferred(violation.createdAt, true)}
 							</span>
 						</Flex>
+						<p style="margin: 4px 0; font-size: 0.85rem; opacity: 0.6;">
+							<strong>Violation ID:</strong>
+							{violation.id} |
+							<strong>User ID:</strong>
+							{violation.userId}
+						</p>
 						<p style="margin: 4px 0; font-size: 0.9rem;">
 							<strong>Type:</strong>
 							{violation.reportedType.toUpperCase()} |

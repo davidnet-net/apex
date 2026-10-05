@@ -763,12 +763,17 @@
 							{openReport.id}
 						</p>
 						<p>
+							<strong>Content ID:</strong>
+							{openReport.reportedId}
+						</p>
+						<p>
 							<strong>Reporter:</strong>
 							<Anchor
 								href="https://account.davidnet.net/profile/{openReport.reporterUsername}"
 								target="_blank">
 								@{openReport.reporterUsername}
 							</Anchor>
+							<span style="opacity: 0.6;">({openReport.reporterDisplayName})</span>
 						</p>
 						<p>
 							<strong>Reported User:</strong>
@@ -777,6 +782,7 @@
 								target="_blank">
 								@{openReport.reportedUsername}
 							</Anchor>
+							<span style="opacity: 0.6;">(User ID: {openReport.reportedUserId})</span>
 						</p>
 						<p>
 							<strong>Submitted:</strong>
@@ -1079,6 +1085,12 @@
 												{formatIsoToPreferred(violation.createdAt, true)}
 											</span>
 										</Flex>
+										<p style="margin: 2px 0; font-size: 0.8rem; opacity: 0.6;">
+											<strong>Violation ID:</strong>
+											{violation.id} |
+											<strong>Target ID:</strong>
+											{violation.reportedId}
+										</p>
 										<p style="margin: 6px 0 2px 0; font-size: 0.9rem;">
 											<strong>Original reason:</strong>
 											{violation.reason}
