@@ -64,13 +64,16 @@
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" height="fit-content">
 			<h2>Davidnet moderation</h2>
-			<Button
-				iconbefore="arrow_back"
-				onclick={() => {
-					navigateBack("/help");
-				}}>
-				Back
-			</Button>
+			<Flex width="fit-content" height="fit-content" gap="small">
+				<LinkButton href="/help">Help center</LinkButton>
+				<Button
+					iconbefore="arrow_back"
+					onclick={() => {
+						navigateBack("/help");
+					}}>
+					Back
+				</Button>
+			</Flex>
 		</Flex>
 		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 			<HorizontalCard
