@@ -2,7 +2,6 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		Anchor,
-		authState,
 		Avatar,
 		Button,
 		Divider,
@@ -14,13 +13,11 @@
 		LinkButton,
 		Lozenge,
 		Modal,
-		navigateBack,
 		patchFetch,
 		postFetch,
 		Skeleton,
 		TextArea,
-		toast,
-		whenAuthReady
+		toast
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
@@ -40,11 +37,6 @@
 
 	const PAGE_SIZE = 30;
 
-	// This screen only makes sense for support staff (it drives /support/moderation/* endpoints
-	// the backend itself gates on internalAccess + supportAccess) - bounce anyone else out to the
-	// account domain's access-denied page rather than showing them an empty/broken list.
-	let hasModerationAccess = $state(false);
-
 	let shortsList = $state<ShortListItem[]>([]);
 	let loading = $state(true);
 	let loadingMore = $state(false);
@@ -55,32 +47,6 @@
 	let violationReason = $state("");
 
 	$effect(() => {
-		(async () => {
-			await whenAuthReady();
-			if (!authState.isLoggedIn && !authState.loading) return;
-
-			const accessResult = await getFetch(
-				`${PUBLIC_BACKEND_URL}/auth/internal`,
-				undefined,
-				undefined,
-				true
-			);
-
-			if (
-				!accessResult.success ||
-				!accessResult.access?.internalAccess ||
-				!accessResult.access?.supportAccess
-			) {
-				window.location.href = "https://account.davidnet.net/internal/access_denied";
-				return;
-			}
-
-			hasModerationAccess = true;
-		})();
-	});
-
-	$effect(() => {
-		if (!hasModerationAccess) return;
 		loadShorts(0, false);
 	});
 
@@ -174,16 +140,7 @@
 
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
-		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>All shorts</h2>
-			<Button
-				iconbefore="arrow_back"
-				onclick={() => {
-					navigateBack("/moderation");
-				}}>
-				Back
-			</Button>
-		</Flex>
+		<h2>All shorts</h2>
 
 		<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
 			Every uploaded short, newest first.

@@ -2,7 +2,6 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		Anchor,
-		authState,
 		Avatar,
 		Button,
 		Divider,
@@ -12,12 +11,10 @@
 		getFetch,
 		Icon,
 		LinkButton,
-		navigateBack,
 		deleteFetch,
 		Skeleton,
 		TextField,
-		toast,
-		whenAuthReady
+		toast
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
@@ -37,7 +34,6 @@
 		userAgent: string | null;
 	}
 
-	let hasModerationAccess = $state(false);
 	let bannedIps = $state<BannedIpRow[]>([]);
 	let loading = $state(true);
 	let unbanningIp = $state<string | undefined>(undefined);
@@ -48,32 +44,6 @@
 	let lookupDone = $state(false);
 
 	$effect(() => {
-		(async () => {
-			await whenAuthReady();
-			if (!authState.isLoggedIn && !authState.loading) return;
-
-			const accessResult = await getFetch(
-				`${PUBLIC_BACKEND_URL}/auth/internal`,
-				undefined,
-				undefined,
-				true
-			);
-
-			if (
-				!accessResult.success ||
-				!accessResult.access?.internalAccess ||
-				!accessResult.access?.supportAccess
-			) {
-				window.location.href = "https://account.davidnet.net/internal/access_denied";
-				return;
-			}
-
-			hasModerationAccess = true;
-		})();
-	});
-
-	$effect(() => {
-		if (!hasModerationAccess) return;
 		loadBannedIps();
 	});
 
@@ -128,16 +98,7 @@
 
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
-		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>IP bans</h2>
-			<Button
-				iconbefore="arrow_back"
-				onclick={() => {
-					navigateBack("/moderation");
-				}}>
-				Back
-			</Button>
-		</Flex>
+		<h2>IP bans</h2>
 
 		<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
 			An IP ban blocks every request from that address across the entire backend - not just this
