@@ -208,7 +208,7 @@
 			{:else}
 				{#each gamesList as game (game.id)}
 					<button class="row-card" onclick={() => openModal(game)}>
-						<Flex justifyContent="spaceBetween" alignItems="center" gap="medium">
+						<Flex justifyContent="spaceBetween" alignItems="start" gap="medium">
 							<Flex alignItems="center" gap="small" style="min-width: 0;">
 								<Avatar size="small" src={game.avatarUrl ?? ""} alt={game.username} />
 								<Flex direction="column" gap="xsmall" style="min-width: 0;">
@@ -218,7 +218,13 @@
 									</span>
 								</Flex>
 							</Flex>
-							<Flex alignItems="center" gap="small" height="fit-content" style="flex-shrink: 0;">
+							<Flex
+								alignItems="center"
+								justifyContent="end"
+								gap="small"
+								flexWrap="wrap"
+								height="fit-content"
+								style="flex-shrink: 0; width: auto;">
 								{#if game.isModerated}
 									<Lozenge appearance="danger">Hidden</Lozenge>
 								{/if}

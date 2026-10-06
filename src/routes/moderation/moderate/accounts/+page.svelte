@@ -237,17 +237,25 @@
 			{:else}
 				{#each accountsList as account (account.userId)}
 					<button class="row-card" onclick={() => openAccountModal(account)}>
-						<Flex justifyContent="spaceBetween" alignItems="center" gap="medium">
+						<Flex justifyContent="spaceBetween" alignItems="start" gap="medium">
 							<Flex alignItems="center" gap="small" style="min-width: 0;">
 								<Avatar size="small" src={account.avatarUrl ?? ""} alt={account.username} />
 								<Flex direction="column" gap="xsmall" style="min-width: 0;">
-									<strong>@{account.username} ({account.displayName})</strong>
+									<strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+										@{account.username} ({account.displayName})
+									</strong>
 									<span style="font-size: 0.85rem; color: {token.theme.color.text.tertiary}">
 										Joined {formatIsoToPreferred(account.createdAt, false)}
 									</span>
 								</Flex>
 							</Flex>
-							<Flex alignItems="center" gap="small" height="fit-content" style="flex-shrink: 0;">
+							<Flex
+								alignItems="center"
+								justifyContent="end"
+								gap="small"
+								flexWrap="wrap"
+								height="fit-content"
+								style="flex-shrink: 0; width: auto;">
 								{#if isCurrentlyBanned(account)}
 									<Lozenge appearance="danger">Banned</Lozenge>
 								{/if}
