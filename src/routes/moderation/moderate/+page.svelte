@@ -79,6 +79,8 @@
 
 	let banDropdownOpen = $state(false);
 	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
+	let selectedBanViolationId = $state<string | undefined>(undefined);
+	let banReasonText = $state("");
 	let currentBanStatus = $state<{ isBanned: boolean; bannedUntil: string | null } | null>(null);
 
 	let refreshInterval: ReturnType<typeof setInterval>;
@@ -600,11 +602,27 @@
 
 	async function executeBanUser(bannedUntil: string | null) {
 		if (!openReport) return;
+
+		if (bannedUntil && !selectedBanViolationId && !banReasonText.trim()) {
+			toast(
+				"Pick an existing violation or type a reason - the DSA requires a statement of reasons for every ban.",
+				undefined,
+				undefined,
+				4000,
+				"warning"
+			);
+			return;
+		}
+
 		isActioning = true;
 
 		const res = await patchFetch(
 			`${PUBLIC_BACKEND_URL}/support/moderation/users/${openReport.reportedUserId}/ban`,
-			{ bannedUntil },
+			{
+				bannedUntil,
+				violationId: selectedBanViolationId,
+				reason: banReasonText.trim() || undefined
+			},
 			undefined,
 			true
 		);
@@ -617,6 +635,8 @@
 				2000,
 				"success"
 			);
+			selectedBanViolationId = undefined;
+			banReasonText = "";
 			await fetchUserBanStatus(openReport.reportedUserId);
 		} else {
 			toast(m.page_moderate_toast_ban_update_failed(), undefined, undefined, 2000, "danger");
@@ -1192,6 +1212,48 @@
 
 						<Divider color="tertiary" />
 
+						{#if targetUserViolations.length > 0}
+							<h4>Pick the violation that justifies this ban</h4>
+							<Flex direction="column" gap="xsmall" marginBottom="small">
+								{#each targetUserViolations as violation (violation.id)}
+									<button
+										type="button"
+										class="violation-pick"
+										class:selected={selectedBanViolationId === violation.id}
+										onclick={() =>
+											(selectedBanViolationId =
+												selectedBanViolationId === violation.id ? undefined : violation.id)}>
+										<Flex justifyContent="spaceBetween" alignItems="center" gap="small">
+											<span style="font-size: 0.85rem;">
+												{violation.reportedType.toUpperCase()} — {violation.moderatorReason ??
+													violation.reason}
+											</span>
+											{#if selectedBanViolationId === violation.id}
+												<Lozenge appearance="success">Selected</Lozenge>
+											{/if}
+										</Flex>
+									</button>
+								{/each}
+							</Flex>
+						{/if}
+
+						<Field
+							label={selectedBanViolationId
+								? "New reason (optional - a violation is already selected)"
+								: "Reason (required unless a violation is selected above)"}
+							name="banReasonText">
+							<TextArea
+								bind:value={banReasonText}
+								rows={2}
+								placeholder="Why is this user being banned? This becomes a new violation on their record."
+								disabled={isActioning} />
+						</Field>
+
+						<p style="font-size: 0.85em; opacity: 0.7; margin: 4px 0 12px 0;">
+							Banning also hides all of this user's shorts and community games. Unbanning does not
+							restore them automatically.
+						</p>
+
 						<h4 style="margin-top: 16px;">{m.page_moderate_configure_ban_duration_heading()}</h4>
 
 						<div style="margin-bottom: 16px;">
@@ -1483,6 +1545,23 @@
 	.action-section h4 {
 		margin: 0 0 4px 0;
 		font-size: 1.05rem;
+	}
+
+	.violation-pick {
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 6px;
+		padding: 8px 12px;
+		width: 100%;
+		box-sizing: border-box;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+		font: inherit;
+	}
+
+	.violation-pick.selected {
+		border-color: #4caf50;
 	}
 
 	.violation-card {

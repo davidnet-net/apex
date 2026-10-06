@@ -24,17 +24,17 @@
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
-	interface ShortListItem {
+	interface GameListItem {
 		id: string;
 		userId: string;
 		username: string;
 		displayName: string;
 		avatarUrl: string | null;
 		title: string;
-		videoUrl: string;
-		views: number;
+		description: string | null;
 		likesCount: number;
 		isModerated: boolean;
+		isAiGenerated: boolean;
 		createdAt: string;
 	}
 
@@ -45,13 +45,13 @@
 	// account domain's access-denied page rather than showing them an empty/broken list.
 	let hasModerationAccess = $state(false);
 
-	let shortsList = $state<ShortListItem[]>([]);
+	let gamesList = $state<GameListItem[]>([]);
 	let loading = $state(true);
 	let loadingMore = $state(false);
 	let hasMore = $state(false);
 	let isActioning = $state(false);
 
-	let openShort = $state<ShortListItem | undefined>(undefined);
+	let openGame = $state<GameListItem | undefined>(undefined);
 	let violationReason = $state("");
 
 	$effect(() => {
@@ -81,10 +81,10 @@
 
 	$effect(() => {
 		if (!hasModerationAccess) return;
-		loadShorts(0, false);
+		loadGames(0, false);
 	});
 
-	async function loadShorts(offset: number, append: boolean) {
+	async function loadGames(offset: number, append: boolean) {
 		if (append) {
 			loadingMore = true;
 		} else {
@@ -92,17 +92,17 @@
 		}
 
 		const res = await getFetch(
-			`${PUBLIC_BACKEND_URL}/support/moderation/shorts/all?limit=${PAGE_SIZE}&offset=${offset}`,
+			`${PUBLIC_BACKEND_URL}/support/moderation/games/all?limit=${PAGE_SIZE}&offset=${offset}`,
 			undefined,
 			undefined,
 			true
 		);
 
-		if (res && res.success && res.shorts) {
-			shortsList = append ? [...shortsList, ...res.shorts] : res.shorts;
+		if (res && res.success && res.games) {
+			gamesList = append ? [...gamesList, ...res.games] : res.games;
 			hasMore = Boolean(res.hasMore);
 		} else if (!append) {
-			shortsList = [];
+			gamesList = [];
 			hasMore = false;
 		}
 
@@ -111,39 +111,38 @@
 	}
 
 	async function loadMore() {
-		await loadShorts(shortsList.length, true);
+		await loadGames(gamesList.length, true);
+	}
+
+	function openModal(game: GameListItem) {
+		openGame = game;
+		violationReason = "";
 	}
 
 	async function toggleModeration(hide: boolean) {
-		if (!openShort) return;
+		if (!openGame) return;
 		isActioning = true;
 		const res = await patchFetch(
-			`${PUBLIC_BACKEND_URL}/social/shorts/${openShort.id}/moderate`,
+			`${PUBLIC_BACKEND_URL}/social/community-games/${openGame.id}/moderate`,
 			{ isModerated: hide },
 			undefined,
 			true
 		);
 
 		if (res && res.success) {
-			openShort.isModerated = hide;
-			shortsList = shortsList.map((s) => (s.id === openShort!.id ? { ...s, isModerated: hide } : s));
-			toast(
-				hide ? "Short hidden from feed" : "Short unmoderated",
-				undefined,
-				undefined,
-				2000,
-				"success"
-			);
+			openGame.isModerated = hide;
+			gamesList = gamesList.map((g) => (g.id === openGame!.id ? { ...g, isModerated: hide } : g));
+			toast(hide ? "Game hidden" : "Game unhidden", undefined, undefined, 2000, "success");
 		} else {
-			toast("Failed to moderate short", undefined, undefined, 2000, "danger");
+			toast("Failed to moderate game", undefined, undefined, 2000, "danger");
 		}
 		isActioning = false;
 	}
 
 	// Lets a moderator issue a violation straight from this browser, without first having to find
-	// (or wait for) a report against this short.
+	// (or wait for) a report against this game.
 	async function issueViolation() {
-		if (!openShort) return;
+		if (!openGame) return;
 		if (!violationReason.trim()) {
 			toast("Reason is required.", undefined, undefined, 3000, "warning");
 			return;
@@ -153,9 +152,9 @@
 		const res = await postFetch(
 			`${PUBLIC_BACKEND_URL}/support/moderation/violations`,
 			{
-				userId: openShort.userId,
-				reportedType: "short",
-				reportedId: openShort.id,
+				userId: openGame.userId,
+				reportedType: "game",
+				reportedId: openGame.id,
 				reason: violationReason.trim()
 			},
 			undefined,
@@ -175,7 +174,7 @@
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="small">
 		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
-			<h2>All shorts</h2>
+			<h2>All community games</h2>
 			<Button
 				iconbefore="arrow_back"
 				onclick={() => {
@@ -186,7 +185,8 @@
 		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
-			Every uploaded short, newest first.
+			Every uploaded community game, newest first. Hide a game or issue a violation directly here -
+			no open report needed.
 		</p>
 
 		<Flex gap="medium" height="fit-content" direction="column">
@@ -194,7 +194,7 @@
 				<Skeleton height="4.5rem" width="100%" />
 				<Skeleton height="4.5rem" width="100%" />
 				<Skeleton height="4.5rem" width="100%" />
-			{:else if shortsList.length === 0}
+			{:else if gamesList.length === 0}
 				<Flex
 					direction="column"
 					alignItems="center"
@@ -202,40 +202,32 @@
 					width="100%"
 					gap="medium"
 					marginTop="medium">
-					<Icon icon="movie" size="giant" />
-					<p style="color: {token.theme.color.text.secondary}">No shorts uploaded yet.</p>
+					<Icon icon="stadia_controller" size="giant" />
+					<p style="color: {token.theme.color.text.secondary}">No community games uploaded yet.</p>
 				</Flex>
 			{:else}
-				{#each shortsList as short (short.id)}
-					<button
-						class="row-card"
-						onclick={() => {
-							openShort = short;
-							violationReason = "";
-						}}>
+				{#each gamesList as game (game.id)}
+					<button class="row-card" onclick={() => openModal(game)}>
 						<Flex justifyContent="spaceBetween" alignItems="center" gap="medium">
 							<Flex alignItems="center" gap="small" style="min-width: 0;">
-								<Avatar size="small" src={short.avatarUrl ?? ""} alt={short.username} />
+								<Avatar size="small" src={game.avatarUrl ?? ""} alt={game.username} />
 								<Flex direction="column" gap="xsmall" style="min-width: 0;">
-									<strong style="overflow: hidden; text-overflow: ellipsis;">
-										{short.title}
-									</strong>
+									<strong style="overflow: hidden; text-overflow: ellipsis;">{game.title}</strong>
 									<span style="font-size: 0.85rem; color: {token.theme.color.text.tertiary}">
-										@{short.username} • {formatIsoToPreferred(short.createdAt, false)}
+										@{game.username} • {formatIsoToPreferred(game.createdAt, false)}
 									</span>
 								</Flex>
 							</Flex>
 							<Flex alignItems="center" gap="small" height="fit-content" style="flex-shrink: 0;">
-								{#if short.isModerated}
+								{#if game.isModerated}
 									<Lozenge appearance="danger">Hidden</Lozenge>
 								{/if}
-								<Lozenge appearance="default">
-									<Icon icon="visibility" size="small" />
-									{short.views}
-								</Lozenge>
+								{#if game.isAiGenerated}
+									<Lozenge appearance="discover">AI-generated</Lozenge>
+								{/if}
 								<Lozenge appearance="default">
 									<Icon icon="favorite" size="small" />
-									{short.likesCount}
+									{game.likesCount}
 								</Lozenge>
 							</Flex>
 						</Flex>
@@ -252,69 +244,58 @@
 	</Flex>
 </Flex>
 
-{#if openShort}
-	<Modal title={openShort.title} onclose={() => (openShort = undefined)}>
+{#if openGame}
+	<Modal title={openGame.title} onclose={() => (openGame = undefined)}>
 		<Flex direction="column" gap="medium" width="100%">
-			<div class="media-container">
-				<!-- svelte-ignore a11y_media_has_caption -->
-				<video src={openShort.videoUrl} controls playsinline class="preview-video"></video>
-			</div>
-
 			<Flex alignItems="center" gap="small">
-				<Avatar size="small" src={openShort.avatarUrl ?? ""} alt={openShort.username} />
-				<Anchor href="https://account.davidnet.net/profile/{openShort.username}" target="_blank">
-					@{openShort.username} ({openShort.displayName})
+				<Avatar size="small" src={openGame.avatarUrl ?? ""} alt={openGame.username} />
+				<Anchor href="https://account.davidnet.net/profile/{openGame.username}" target="_blank">
+					@{openGame.username} ({openGame.displayName})
 				</Anchor>
 			</Flex>
 
+			{#if openGame.description}
+				<p style="margin: 0; color: {token.theme.color.text.secondary}">{openGame.description}</p>
+			{/if}
+
 			<Flex gap="small" flexWrap="wrap">
-				<Lozenge appearance={openShort.isModerated ? "danger" : "success"}>
-					{openShort.isModerated ? "Hidden from feed" : "Visible on feed"}
-				</Lozenge>
-				<Lozenge appearance="default">
-					<Icon icon="visibility" size="small" />
-					{openShort.views} views
+				<Lozenge appearance={openGame.isModerated ? "danger" : "success"}>
+					{openGame.isModerated ? "Hidden" : "Visible"}
 				</Lozenge>
 				<Lozenge appearance="default">
 					<Icon icon="favorite" size="small" />
-					{openShort.likesCount} likes
+					{openGame.likesCount} likes
 				</Lozenge>
 			</Flex>
 
 			<Divider color="tertiary" />
 
 			<Flex direction="column" gap="xsmall">
-				<p style="margin: 0;">
-					<strong>Short ID:</strong>
-					{openShort.id}
-				</p>
-				<p style="margin: 0;">
-					<strong>Owner User ID:</strong>
-					{openShort.userId}
-				</p>
+				<p style="margin: 0;"><strong>Game ID:</strong> {openGame.id}</p>
+				<p style="margin: 0;"><strong>Owner User ID:</strong> {openGame.userId}</p>
 				<p style="margin: 0;">
 					<strong>Uploaded:</strong>
-					{formatIsoToPreferred(openShort.createdAt, true)}
+					{formatIsoToPreferred(openGame.createdAt, true)}
 				</p>
 			</Flex>
 
 			<Divider color="tertiary" />
 
-			<Field label="Issue a violation against this short's creator (optional)" name="violationReason">
+			<Field label="Issue a violation against this game's creator (optional)" name="violationReason">
 				<TextArea bind:value={violationReason} rows={2} placeholder="Reason for the violation..." />
 			</Field>
 			<Flex gap="small">
 				<Button disabled={isActioning} onclick={issueViolation}>Issue violation</Button>
-				<LinkButton href="/moderation/moderate/bans?userId={openShort.userId}">Ban user</LinkButton>
+				<LinkButton href="/moderation/moderate/bans?userId={openGame.userId}">Ban user</LinkButton>
 			</Flex>
 		</Flex>
 
 		{#snippet actions()}
 			<Flex gap="small" justifyContent="spaceBetween" width="100%">
-				<Button disabled={isActioning} onclick={() => (openShort = undefined)}>Close</Button>
-				{#if !openShort.isModerated}
+				<Button disabled={isActioning} onclick={() => (openGame = undefined)}>Close</Button>
+				{#if !openGame.isModerated}
 					<Button appearance="danger" disabled={isActioning} onclick={() => toggleModeration(true)}>
-						Hide from feed
+						Hide
 					</Button>
 				{:else}
 					<Button appearance="subtle" disabled={isActioning} onclick={() => toggleModeration(false)}>
@@ -342,24 +323,5 @@
 
 	.row-card:hover {
 		background: rgba(255, 255, 255, 0.05);
-	}
-
-	.media-container {
-		position: relative;
-		width: 100%;
-		height: 380px;
-		border-radius: 8px;
-		overflow: hidden;
-		background: #000;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-
-	.preview-video {
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
 	}
 </style>

@@ -1,6 +1,6 @@
 // --- COMMON MODELS ---
 export type ReportStatus = "pending" | "resolved" | "dismissed";
-export type ReportType = "profile" | "short";
+export type ReportType = "profile" | "short" | "game";
 
 export interface UserReport {
 	id: string;
@@ -38,6 +38,42 @@ export interface AccountModerationStatus {
 	reportTrustScore: number;
 	bannedUntil: string | null;
 	updatedAt: string;
+}
+
+export interface BanEvent {
+	id: string;
+	action: "ban" | "unban";
+	bannedUntil: string | null;
+	violationId: string | null;
+	reason: string | null;
+	moderatorId: string;
+	moderatorUsername: string;
+	createdAt: string;
+}
+
+export interface UserIp {
+	ip: string;
+	countryCode: string | null;
+	userAgent: string | null;
+	lastSeenAt: string;
+	createdAt: string;
+	isBanned: boolean;
+}
+
+export interface IpLinkedUser {
+	userId: string;
+	username: string;
+	displayName: string;
+	avatarUrl: string | null;
+	lastSeenAt: string;
+	userAgent: string | null;
+}
+
+export interface BannedIp {
+	ip: string;
+	reason: string | null;
+	createdAt: string;
+	moderatorUsername: string;
 }
 
 // --- API RESPONSE TYPES ---
@@ -155,6 +191,7 @@ export type BanUserResponse =
 			success: true;
 			code: "USER_BANNED" | "USER_UNBANNED";
 			status: AccountModerationStatus;
+			violationId: string | null;
 	  }
 	| {
 			success: false;
@@ -162,5 +199,40 @@ export type BanUserResponse =
 				| "FORBIDDEN_INSUFFICIENT_PERMISSIONS"
 				| "INVALID_JSON"
 				| "INVALID_DATE_FORMAT"
+				| "VIOLATION_NOT_FOUND"
+				| "MISSING_REASON_OR_VIOLATION"
 				| "UPDATE_FAILED";
 	  };
+
+// 9. Edit Violation (Admin)
+export type EditViolationResponse =
+	| {
+			success: true;
+			code: "VIOLATION_UPDATED";
+			violation: UserViolation;
+	  }
+	| {
+			success: false;
+			code:
+				| "FORBIDDEN_INSUFFICIENT_PERMISSIONS"
+				| "INVALID_JSON"
+				| "NO_FIELDS_TO_UPDATE"
+				| "MISSING_REASON"
+				| "REASON_TOO_LONG"
+				| "MODERATOR_REASON_TOO_LONG"
+				| "VIOLATION_NOT_FOUND"
+				| "UPDATE_FAILED";
+	  };
+
+// 10. Delete Violation (Admin)
+export type DeleteViolationResponse =
+	| { success: true; code: "VIOLATION_DELETED" }
+	| {
+			success: false;
+			code: "FORBIDDEN_INSUFFICIENT_PERMISSIONS" | "VIOLATION_NOT_FOUND" | "DELETE_FAILED";
+	  };
+
+// 11. IP ban/unban (Admin)
+export type BanIpResponse =
+	| { success: true; code: "IP_BANNED"; bannedIp: BannedIp }
+	| { success: false; code: "FORBIDDEN_INSUFFICIENT_PERMISSIONS" | "INVALID_IP" | "UPDATE_FAILED" };

@@ -5,12 +5,18 @@
 		authState,
 		Avatar,
 		Button,
+		deleteFetch,
+		Field,
 		Flex,
 		formatIsoToPreferred,
 		getFetch,
 		Icon,
+		Modal,
 		navigateBack,
+		patchFetch,
 		Skeleton,
+		TextArea,
+		toast,
 		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 
@@ -19,6 +25,63 @@
 
 	let violationsList = $state<any[]>([]);
 	let loading = $state(true);
+
+	let editingViolation = $state<any | undefined>(undefined);
+	let editReason = $state("");
+	let editModeratorReason = $state("");
+	let savingEdit = $state(false);
+	let deletingId = $state<string | undefined>(undefined);
+
+	function openEdit(violation: any) {
+		editingViolation = violation;
+		editReason = violation.reason;
+		editModeratorReason = violation.moderatorReason ?? "";
+	}
+
+	async function saveEdit() {
+		if (!editingViolation) return;
+		if (!editReason.trim()) {
+			toast("Reason can't be empty.", undefined, undefined, 3000, "warning");
+			return;
+		}
+
+		savingEdit = true;
+		const res = await patchFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/violations/${editingViolation.id}`,
+			{ reason: editReason.trim(), moderatorReason: editModeratorReason.trim() || null },
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			toast("Violation updated.", undefined, undefined, 2000, "success");
+			editingViolation = undefined;
+			await loadAllViolations();
+		} else {
+			toast("Failed to update violation.", undefined, undefined, 2000, "danger");
+		}
+		savingEdit = false;
+	}
+
+	async function deleteViolation(id: string) {
+		if (!confirm("Delete this violation? This removes it from the user's record permanently.")) return;
+
+		deletingId = id;
+		const res = await deleteFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/violations/${id}`,
+			undefined,
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			toast("Violation deleted.", undefined, undefined, 2000, "success");
+			violationsList = violationsList.filter((v) => v.id !== id);
+		} else {
+			toast("Failed to delete violation.", undefined, undefined, 2000, "danger");
+		}
+		deletingId = undefined;
+	}
 
 	// This screen only makes sense for support staff (it drives /support/moderation/* endpoints
 	// the backend itself gates on internalAccess + supportAccess) - bounce anyone else out to the
@@ -143,12 +206,50 @@
 								{violation.moderatorReason}
 							</p>
 						{/if}
+						<Flex gap="small" marginTop="small" justifyContent="end">
+							<Button onclick={() => openEdit(violation)}>Edit</Button>
+							<Button
+								appearance="danger"
+								loading={deletingId === violation.id}
+								onclick={() => deleteViolation(violation.id)}>
+								Delete
+							</Button>
+						</Flex>
 					</div>
 				{/each}
 			{/if}
 		</Flex>
 	</Flex>
 </Flex>
+
+{#if editingViolation}
+	<Modal
+		title="Edit violation"
+		onclose={() => {
+			editingViolation = undefined;
+		}}>
+		<Flex direction="column" gap="medium" width="100%">
+			<Field label="Reason" name="editReason" required>
+				<TextArea bind:value={editReason} rows={3} />
+			</Field>
+			<Field label="Moderator note (optional)" name="editModeratorReason">
+				<TextArea bind:value={editModeratorReason} rows={3} />
+			</Field>
+		</Flex>
+
+		{#snippet actions()}
+			<Flex gap="small" justifyContent="spaceBetween" width="100%">
+				<Button
+					onclick={() => {
+						editingViolation = undefined;
+					}}>
+					Cancel
+				</Button>
+				<Button appearance="danger" loading={savingEdit} onclick={saveEdit}>Save</Button>
+			</Flex>
+		{/snippet}
+	</Modal>
+{/if}
 
 <style>
 	.violation-row-card {

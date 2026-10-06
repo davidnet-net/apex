@@ -9,6 +9,7 @@
 		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+	import DsaInfoPanel from "$lib/components/DsaInfoPanel/DsaInfoPanel.svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { onMount } from "svelte";
 	import * as m from "$lib/paraglide/messages.js";
@@ -92,6 +93,9 @@
 			<Flex justifyContent="spaceBetween" height="fit-content">
 				<h2>{m.page_help_internal_heading()}</h2>
 			</Flex>
+			<Flex width="100%" marginBottom="medium">
+				<DsaInfoPanel />
+			</Flex>
 			<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 				<HorizontalCard
 					title={m.page_moderation_card_manage_reports_title()}
@@ -111,10 +115,15 @@
 					icon="movie"
 					href="/moderation/moderate/shorts" />
 				<HorizontalCard
+					title="All community games"
+					icon="stadia_controller"
+					href="/moderation/moderate/games" />
+				<HorizontalCard
 					title={m.page_moderation_card_all_accounts_title()}
 					description={m.page_moderation_card_all_accounts_description()}
 					icon="group"
 					href="/moderation/moderate/accounts" />
+				<HorizontalCard title="IP bans" icon="wifi_off" href="/moderation/moderate/ips" />
 			</Flex>
 		{/if}
 	</Flex>

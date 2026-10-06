@@ -8,13 +8,17 @@
 		Divider,
 		Flex,
 		formatIsoToPreferred,
+		Field,
 		getFetch,
 		Icon,
 		LinkButton,
 		Lozenge,
 		Modal,
 		navigateBack,
+		postFetch,
 		Skeleton,
+		TextArea,
+		toast,
 		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
@@ -25,6 +29,7 @@
 		displayName: string;
 		avatarUrl: string | null;
 		email: string;
+		emailVerified: boolean;
 		countryCode: string | null;
 		createdAt: string;
 		bannedUntil: string | null;
@@ -32,6 +37,14 @@
 		internalAccess: boolean | null;
 		supportAccess: boolean | null;
 		developerAccess: boolean | null;
+	}
+
+	interface AccountIp {
+		ip: string;
+		countryCode: string | null;
+		userAgent: string | null;
+		lastSeenAt: string;
+		isBanned: boolean;
 	}
 
 	const PAGE_SIZE = 30;
@@ -47,9 +60,84 @@
 	let hasMore = $state(false);
 
 	let openAccount = $state<AccountListItem | undefined>(undefined);
+	let accountIps = $state<AccountIp[]>([]);
+	let loadingIps = $state(false);
+	let banningIp = $state<string | undefined>(undefined);
+	let violationReason = $state("");
+	let issuingViolation = $state(false);
 
 	function isCurrentlyBanned(account: AccountListItem): boolean {
 		return Boolean(account.bannedUntil && new Date(account.bannedUntil) > new Date());
+	}
+
+	async function openAccountModal(account: AccountListItem) {
+		openAccount = account;
+		accountIps = [];
+		violationReason = "";
+		loadingIps = true;
+
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/users/${account.userId}/ips`,
+			undefined,
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			accountIps = res.ips;
+		}
+
+		loadingIps = false;
+	}
+
+	async function banIp(ip: string) {
+		if (!confirm(`IP-ban ${ip}? This blocks every request from that address across all of Davidnet.`))
+			return;
+
+		banningIp = ip;
+		const res = await postFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/ips/${encodeURIComponent(ip)}/ban`,
+			{},
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			accountIps = accountIps.map((row) => (row.ip === ip ? { ...row, isBanned: true } : row));
+		}
+
+		banningIp = undefined;
+	}
+
+	// Lets a moderator issue a violation straight from this browser, without first having to find
+	// (or wait for) a report against this profile.
+	async function issueViolation() {
+		if (!openAccount) return;
+		if (!violationReason.trim()) {
+			toast("Reason is required.", undefined, undefined, 3000, "warning");
+			return;
+		}
+
+		issuingViolation = true;
+		const res = await postFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/violations`,
+			{
+				userId: openAccount.userId,
+				reportedType: "profile",
+				reportedId: openAccount.userId,
+				reason: violationReason.trim()
+			},
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			toast("Violation issued.", undefined, undefined, 2000, "success");
+			violationReason = "";
+		} else {
+			toast("Failed to issue violation.", undefined, undefined, 2000, "danger");
+		}
+		issuingViolation = false;
 	}
 
 	$effect(() => {
@@ -148,7 +236,7 @@
 				</Flex>
 			{:else}
 				{#each accountsList as account (account.userId)}
-					<button class="row-card" onclick={() => (openAccount = account)}>
+					<button class="row-card" onclick={() => openAccountModal(account)}>
 						<Flex justifyContent="spaceBetween" alignItems="center" gap="medium">
 							<Flex alignItems="center" gap="small" style="min-width: 0;">
 								<Avatar size="small" src={account.avatarUrl ?? ""} alt={account.username} />
@@ -162,6 +250,11 @@
 							<Flex alignItems="center" gap="small" height="fit-content" style="flex-shrink: 0;">
 								{#if isCurrentlyBanned(account)}
 									<Lozenge appearance="danger">Banned</Lozenge>
+								{/if}
+								{#if account.emailVerified}
+									<Lozenge appearance="success">Email verified</Lozenge>
+								{:else}
+									<Lozenge appearance="warning">Email unverified</Lozenge>
 								{/if}
 								{#if account.internalAccess}
 									<Lozenge appearance="discover">Internal</Lozenge>
@@ -206,6 +299,11 @@
 				{:else}
 					<Lozenge appearance="success">Not banned</Lozenge>
 				{/if}
+				{#if openAccount.emailVerified}
+					<Lozenge appearance="success">Email verified</Lozenge>
+				{:else}
+					<Lozenge appearance="warning">Email unverified</Lozenge>
+				{/if}
 				{#if openAccount.internalAccess}
 					<Lozenge appearance="discover">Internal access</Lozenge>
 				{/if}
@@ -241,6 +339,48 @@
 					{formatIsoToPreferred(openAccount.createdAt, true)}
 				</p>
 			</Flex>
+
+			<Divider color="tertiary" />
+
+			<Flex direction="column" gap="xsmall">
+				<strong>IPs seen</strong>
+				{#if loadingIps}
+					<Skeleton height="2rem" width="100%" />
+				{:else if accountIps.length === 0}
+					<span style="color: {token.theme.color.text.tertiary}">No IP history recorded.</span>
+				{:else}
+					{#each accountIps as row (row.ip)}
+						<Flex justifyContent="spaceBetween" alignItems="center" gap="small">
+							<Flex direction="column" gap="xsmall" style="min-width: 0;">
+								<span>
+									{row.ip}
+									{#if row.countryCode}({row.countryCode}){/if}
+								</span>
+								<span style="font-size: 0.8rem; color: {token.theme.color.text.tertiary}">
+									Last seen {formatIsoToPreferred(row.lastSeenAt, true)}
+								</span>
+							</Flex>
+							{#if row.isBanned}
+								<Lozenge appearance="danger">IP banned</Lozenge>
+							{:else}
+								<Button
+									appearance="danger"
+									loading={banningIp === row.ip}
+									onclick={() => banIp(row.ip)}>
+									Ban IP
+								</Button>
+							{/if}
+						</Flex>
+					{/each}
+				{/if}
+			</Flex>
+
+			<Divider color="tertiary" />
+
+			<Field label="Issue a violation against this profile (optional)" name="violationReason">
+				<TextArea bind:value={violationReason} rows={2} placeholder="Reason for the violation..." />
+			</Field>
+			<Button disabled={issuingViolation} onclick={issueViolation}>Issue violation</Button>
 		</Flex>
 
 		{#snippet actions()}

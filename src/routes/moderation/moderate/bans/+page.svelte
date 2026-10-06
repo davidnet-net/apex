@@ -12,6 +12,7 @@
 		getFetch,
 		patchFetch, // or patchFetch
 		Icon,
+		Lozenge,
 		Modal,
 		navigateBack,
 		Skeleton,
@@ -19,6 +20,7 @@
 		whenAuthReady,
 		Field,
 		Dropdown,
+		TextArea,
 		TextField
 	} from "@davidnet-net/svelte-ui";
 
@@ -33,6 +35,13 @@
 	let banDropdownOpen = $state(false);
 	let selectedBanOption = $state<"1day" | "7days" | "30days" | "1year" | "forever">("1day");
 	let isSubmitting = $state(false);
+
+	// DSA Art. 17 "statement of reasons" - a ban must resolve to a violation, either one the
+	// moderator picks from this user's existing record or a fresh one created from typed reason.
+	let targetViolations = $state<any[]>([]);
+	let loadingViolations = $state(false);
+	let selectedViolationId = $state<string | undefined>(undefined);
+	let banReason = $state("");
 
 	// This screen only makes sense for support staff (it drives /support/moderation/* endpoints
 	// the backend itself gates on internalAccess + supportAccess) - bounce anyone else out to the
@@ -111,9 +120,36 @@
 		isSubmitting = false;
 	}
 
+	async function loadTargetViolations() {
+		if (!targetUserIdInput.trim()) return;
+
+		loadingViolations = true;
+		selectedViolationId = undefined;
+		const res = await getFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/users/${targetUserIdInput.trim()}/violations`,
+			undefined,
+			undefined,
+			true
+		);
+
+		targetViolations = res && res.success ? res.violations : [];
+		loadingViolations = false;
+	}
+
 	async function handleManualBanSubmit() {
 		if (!targetUserIdInput.trim()) {
 			toast(m.page_bans_toast_invalid_target(), undefined, undefined, 2500, "warning");
+			return;
+		}
+
+		if (!selectedViolationId && !banReason.trim()) {
+			toast(
+				"Pick an existing violation or type a reason - the DSA requires a statement of reasons for every ban.",
+				undefined,
+				undefined,
+				4000,
+				"warning"
+			);
 			return;
 		}
 
@@ -141,7 +177,11 @@
 		isSubmitting = true;
 		const res = await patchFetch(
 			`${PUBLIC_BACKEND_URL}/support/moderation/users/${targetUserIdInput.trim()}/ban`,
-			{ bannedUntil: targetDate },
+			{
+				bannedUntil: targetDate,
+				violationId: selectedViolationId,
+				reason: banReason.trim() || undefined
+			},
 			undefined,
 			true
 		);
@@ -149,6 +189,9 @@
 		if (res && res.success) {
 			toast(m.page_moderate_toast_user_banned(), undefined, undefined, 2000, "success");
 			targetUserIdInput = "";
+			banReason = "";
+			selectedViolationId = undefined;
+			targetViolations = [];
 			await loadBannedUsers();
 		} else {
 			toast(m.page_bans_toast_ban_failed(), undefined, undefined, 2000, "danger");
@@ -179,11 +222,62 @@
 
 			<Flex direction="column" gap="small">
 				<Field label={m.page_bans_target_user_id_label()} name="targetUserId" required>
-					<TextField
-						bind:value={targetUserIdInput}
-						placeholder={m.page_bans_target_user_id_placeholder()}
+					<Flex gap="small">
+						<TextField
+							bind:value={targetUserIdInput}
+							placeholder={m.page_bans_target_user_id_placeholder()}
+							disabled={isSubmitting} />
+						<Button
+							appearance="subtle"
+							loading={loadingViolations}
+							onclick={loadTargetViolations}>
+							Load violations
+						</Button>
+					</Flex>
+				</Field>
+
+				{#if targetViolations.length > 0}
+					<Field label="Pick the violation that justifies this ban" name="violationId">
+						<Flex direction="column" gap="xsmall">
+							{#each targetViolations as violation (violation.id)}
+								<button
+									type="button"
+									class="violation-pick"
+									class:selected={selectedViolationId === violation.id}
+									onclick={() =>
+										(selectedViolationId =
+											selectedViolationId === violation.id ? undefined : violation.id)}>
+									<Flex justifyContent="spaceBetween" alignItems="center" gap="small">
+										<span style="font-size: 0.85rem;">
+											{violation.reportedType.toUpperCase()} — {violation.moderatorReason ??
+												violation.reason}
+										</span>
+										{#if selectedViolationId === violation.id}
+											<Lozenge appearance="success">Selected</Lozenge>
+										{/if}
+									</Flex>
+								</button>
+							{/each}
+						</Flex>
+					</Field>
+				{/if}
+
+				<Field
+					label={selectedViolationId
+						? "New reason (optional - a violation is already selected)"
+						: "Reason (required unless a violation is selected above)"}
+					name="banReason">
+					<TextArea
+						bind:value={banReason}
+						rows={2}
+						placeholder="Why is this user being banned? This becomes a new violation on their record."
 						disabled={isSubmitting} />
 				</Field>
+
+				<p style="font-size: 0.85em; color: {token.theme.color.text.tertiary}; margin: 0;">
+					Banning also hides all of this user's shorts and community games. Unbanning does not
+					restore them automatically.
+				</p>
 
 				<!-- Duration Dropdown -->
 				<div style="margin: 8px 0;">
@@ -342,5 +436,22 @@
 		padding: 16px;
 		width: 100%;
 		box-sizing: border-box;
+	}
+
+	.violation-pick {
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 6px;
+		padding: 8px 12px;
+		width: 100%;
+		box-sizing: border-box;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+		font: inherit;
+	}
+
+	.violation-pick.selected {
+		border-color: #4caf50;
 	}
 </style>
