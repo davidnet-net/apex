@@ -9,7 +9,6 @@
 		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
-	import DsaInfoPanel from "$lib/components/DsaInfoPanel/DsaInfoPanel.svelte";
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { onMount } from "svelte";
 	import * as m from "$lib/paraglide/messages.js";
@@ -92,9 +91,6 @@
 		{#if internalAccessResult?.supportAccess}
 			<Flex justifyContent="spaceBetween" height="fit-content">
 				<h2>{m.page_help_internal_heading()}</h2>
-			</Flex>
-			<Flex width="100%" marginBottom="medium">
-				<DsaInfoPanel />
 			</Flex>
 			<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap">
 				<HorizontalCard
