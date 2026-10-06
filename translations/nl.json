@@ -237,9 +237,9 @@
 
 	"page_bans_heading": "Banbeheer",
 	"page_bans_issue_manual_heading": "Handmatige ban uitgeven",
-	"page_bans_issue_manual_description": "Verban direct een gebruikersaccount door hun ID in te voeren en een duur te selecteren.",
-	"page_bans_target_user_id_label": "Doelgebruiker-ID",
-	"page_bans_target_user_id_placeholder": "uuid hier",
+	"page_bans_issue_manual_description": "Verban direct een gebruikersaccount door hun gebruikersnaam of ID in te voeren en een duur te selecteren.",
+	"page_bans_target_user_id_label": "Gebruikersnaam of gebruikers-ID",
+	"page_bans_target_user_id_placeholder": "@gebruikersnaam of uuid",
 	"page_bans_apply_button": "Pas ban toe op gebruiker",
 	"page_bans_active_list_heading": "Actieve bans",
 	"page_bans_empty": "Geen actieve bans.",

@@ -237,9 +237,9 @@
 
 	"page_bans_heading": "Ban management",
 	"page_bans_issue_manual_heading": "Issue Manual Ban",
-	"page_bans_issue_manual_description": "Directly ban a user account by entering their id and selecting a duration.",
-	"page_bans_target_user_id_label": "Target User ID",
-	"page_bans_target_user_id_placeholder": "uuid here",
+	"page_bans_issue_manual_description": "Directly ban a user account by entering their username or user ID and selecting a duration.",
+	"page_bans_target_user_id_label": "Username or User ID",
+	"page_bans_target_user_id_placeholder": "@username or uuid",
 	"page_bans_apply_button": "Apply Ban to User",
 	"page_bans_active_list_heading": "Active Bans List",
 	"page_bans_empty": "No active bans.",
