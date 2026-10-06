@@ -17,7 +17,8 @@
 		postFetch,
 		Skeleton,
 		TextArea,
-		toast
+		toast,
+		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
@@ -47,7 +48,10 @@
 	let violationReason = $state("");
 
 	$effect(() => {
-		loadShorts(0, false);
+		(async () => {
+			await whenAuthReady();
+			loadShorts(0, false);
+		})();
 	});
 
 	async function loadShorts(offset: number, append: boolean) {

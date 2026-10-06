@@ -16,7 +16,8 @@
 		postFetch,
 		Skeleton,
 		TextArea,
-		toast
+		toast,
+		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
@@ -133,7 +134,10 @@
 	}
 
 	$effect(() => {
-		loadAccounts(0, false);
+		(async () => {
+			await whenAuthReady();
+			loadAccounts(0, false);
+		})();
 	});
 
 	async function loadAccounts(offset: number, append: boolean) {

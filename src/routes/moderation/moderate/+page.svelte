@@ -91,7 +91,10 @@
 
 	$effect(() => {
 		const currentFilter = filterStatus;
-		loadData(currentFilter);
+		(async () => {
+			await whenAuthReady();
+			loadData(currentFilter);
+		})();
 	});
 
 	onMount(() => {

@@ -14,7 +14,8 @@
 		deleteFetch,
 		Skeleton,
 		TextField,
-		toast
+		toast,
+		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
@@ -44,7 +45,10 @@
 	let lookupDone = $state(false);
 
 	$effect(() => {
-		loadBannedIps();
+		(async () => {
+			await whenAuthReady();
+			loadBannedIps();
+		})();
 	});
 
 	async function loadBannedIps() {

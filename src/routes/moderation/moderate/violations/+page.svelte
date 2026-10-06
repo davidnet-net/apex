@@ -14,7 +14,8 @@
 		patchFetch,
 		Skeleton,
 		TextArea,
-		toast
+		toast,
+		whenAuthReady
 	} from "@davidnet-net/svelte-ui";
 
 	import { token } from "@davidnet-net/svelte-ui/tokens";
@@ -81,7 +82,10 @@
 	}
 
 	$effect(() => {
-		loadAllViolations();
+		(async () => {
+			await whenAuthReady();
+			loadAllViolations();
+		})();
 	});
 
 	async function loadAllViolations() {

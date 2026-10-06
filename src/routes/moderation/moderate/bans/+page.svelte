@@ -15,6 +15,7 @@
 		Modal,
 		Skeleton,
 		toast,
+		whenAuthReady,
 		Field,
 		Dropdown,
 		TextArea,
@@ -41,7 +42,10 @@
 	let banReason = $state("");
 
 	$effect(() => {
-		loadBannedUsers();
+		(async () => {
+			await whenAuthReady();
+			loadBannedUsers();
+		})();
 	});
 
 	onMount(() => {
