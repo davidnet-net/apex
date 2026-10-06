@@ -765,8 +765,7 @@
 								await fetchUserBanStatus(report.reportedUserId);
 								await fetchUserViolations(report.reportedUserId);
 							}}
-							title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`}
-							description={`${m.page_moderate_report_by_prefix()} @${report.reporterUsername} • ${formatIsoToPreferred(report.createdAt, false)}`} />
+							title={`[${report.reportType.toUpperCase()}] @${report.reportedUsername}`} />
 					</div>
 				{/each}
 			{/if}
