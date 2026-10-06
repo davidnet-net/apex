@@ -14,9 +14,9 @@
 
 	// Every page under /moderation/moderate drives /support/moderation/* endpoints the backend
 	// itself gates on internalAccess + supportAccess - this used to be copy-pasted into 5+ separate
-	// pages, now it's checked once here and children only ever mount once access is confirmed.
-	let hasModerationAccess = $state(false);
-
+	// pages, now it's checked once here. Matches the original per-page behavior: render immediately,
+	// only redirect away if the check comes back denied - never hide the UI while the check is in
+	// flight, since that would turn any slow/failed check into a blank section.
 	$effect(() => {
 		(async () => {
 			await whenAuthReady();
@@ -35,10 +35,7 @@
 				!accessResult.access?.supportAccess
 			) {
 				window.location.href = "https://account.davidnet.net/internal/access_denied";
-				return;
 			}
-
-			hasModerationAccess = true;
 		})();
 	});
 
@@ -53,24 +50,22 @@
 	];
 </script>
 
-{#if hasModerationAccess}
-	<Flex alignItems="center" direction="column">
-		<Flex width="90%" marginTop="giant" direction="column" gap="small">
-			<Flex gap="small" flexWrap="wrap" alignItems="center" justifyContent="spaceBetween">
-				<Flex gap="small" flexWrap="wrap">
-					{#each tabs as tab (tab.href)}
-						<LinkButton href={tab.href}>{tab.label}</LinkButton>
-					{/each}
-				</Flex>
-				<Button
-					iconbefore="arrow_back"
-					onclick={() => {
-						navigateBack("/moderation");
-					}}>
-					Exit
-				</Button>
+<Flex alignItems="center" direction="column">
+	<Flex width="90%" marginTop="giant" direction="column" gap="small">
+		<Flex gap="small" flexWrap="wrap" alignItems="center" justifyContent="spaceBetween">
+			<Flex gap="small" flexWrap="wrap">
+				{#each tabs as tab (tab.href)}
+					<LinkButton href={tab.href}>{tab.label}</LinkButton>
+				{/each}
 			</Flex>
+			<Button
+				iconbefore="arrow_back"
+				onclick={() => {
+					navigateBack("/moderation");
+				}}>
+				Exit
+			</Button>
 		</Flex>
 	</Flex>
-	{@render children()}
-{/if}
+</Flex>
+{@render children()}
