@@ -3,6 +3,7 @@
 	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import {
 		Anchor,
+		authState,
 		Avatar,
 		Button,
 		Divider,
@@ -13,6 +14,7 @@
 		Icon,
 		Lozenge,
 		Modal,
+		navigateBack,
 		Skeleton,
 		toast,
 		whenAuthReady,
@@ -41,11 +43,39 @@
 	let selectedViolationId = $state<string | undefined>(undefined);
 	let banReason = $state("");
 
+	// This screen only makes sense for support staff (it drives /support/moderation/* endpoints
+	// the backend itself gates on internalAccess + supportAccess) - bounce anyone else out to the
+	// account domain's access-denied page rather than showing them an empty/broken list.
+	let hasModerationAccess = $state(false);
+
 	$effect(() => {
 		(async () => {
 			await whenAuthReady();
-			loadBannedUsers();
+			if (!authState.isLoggedIn && !authState.loading) return;
+
+			const accessResult = await getFetch(
+				`${PUBLIC_BACKEND_URL}/auth/internal`,
+				undefined,
+				undefined,
+				true
+			);
+
+			if (
+				!accessResult.success ||
+				!accessResult.access?.internalAccess ||
+				!accessResult.access?.supportAccess
+			) {
+				window.location.href = "https://account.davidnet.net/internal/access_denied";
+				return;
+			}
+
+			hasModerationAccess = true;
 		})();
+	});
+
+	$effect(() => {
+		if (!hasModerationAccess) return;
+		loadBannedUsers();
 	});
 
 	onMount(() => {
@@ -172,7 +202,16 @@
 
 <Flex alignItems="center" marginTop="giant" direction="column">
 	<Flex width="90%" marginTop="giant" direction="column" gap="medium">
-		<h2>{m.page_bans_heading()}</h2>
+		<Flex justifyContent="spaceBetween" alignItems="center" height="fit-content">
+			<h2>{m.page_bans_heading()}</h2>
+			<Button
+				iconbefore="arrow_back"
+				onclick={() => {
+					navigateBack("/moderation");
+				}}>
+				{m.common_back()}
+			</Button>
+		</Flex>
 
 		<!-- Manual Ban Issuer Section -->
 		<div class="action-section">
