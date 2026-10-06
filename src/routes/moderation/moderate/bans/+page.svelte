@@ -40,6 +40,7 @@
 	// moderator picks from this user's existing record or a fresh one created from typed reason.
 	let targetViolations = $state<any[]>([]);
 	let loadingViolations = $state(false);
+	let violationsLoaded = $state(false);
 	let selectedViolationId = $state<string | undefined>(undefined);
 	let banReason = $state("");
 
@@ -124,6 +125,7 @@
 		if (!targetUserIdInput.trim()) return;
 
 		loadingViolations = true;
+		violationsLoaded = false;
 		selectedViolationId = undefined;
 		const res = await getFetch(
 			`${PUBLIC_BACKEND_URL}/support/moderation/users/${targetUserIdInput.trim()}/violations`,
@@ -132,7 +134,21 @@
 			true
 		);
 
-		targetViolations = res && res.success ? res.violations : [];
+		if (res && res.success) {
+			targetViolations = res.violations;
+		} else {
+			targetViolations = [];
+			toast(
+				res?.code === "INVALID_USER_ID"
+					? "That doesn't look like a valid user ID - paste just the raw ID, not a label."
+					: "Failed to load violations for that user.",
+				undefined,
+				undefined,
+				3000,
+				"danger"
+			);
+		}
+		violationsLoaded = true;
 		loadingViolations = false;
 	}
 
@@ -192,6 +208,7 @@
 			banReason = "";
 			selectedViolationId = undefined;
 			targetViolations = [];
+			violationsLoaded = false;
 			await loadBannedUsers();
 		} else {
 			toast(m.page_bans_toast_ban_failed(), undefined, undefined, 2000, "danger");
@@ -235,6 +252,12 @@
 						</Button>
 					</Flex>
 				</Field>
+
+				{#if violationsLoaded && targetViolations.length === 0}
+					<p style="font-size: 0.85em; color: {token.theme.color.text.tertiary}; margin: 0;">
+						No existing violations found for this user - type a new reason below instead.
+					</p>
+				{/if}
 
 				{#if targetViolations.length > 0}
 					<Field label="Pick the violation that justifies this ban" name="violationId">

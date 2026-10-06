@@ -107,7 +107,6 @@
 					href="/moderation/moderate/bans" />
 				<HorizontalCard
 					title={m.page_moderation_card_all_shorts_title()}
-					description={m.page_moderation_card_all_shorts_description()}
 					icon="movie"
 					href="/moderation/moderate/shorts" />
 				<HorizontalCard
@@ -116,7 +115,6 @@
 					href="/moderation/moderate/games" />
 				<HorizontalCard
 					title={m.page_moderation_card_all_accounts_title()}
-					description={m.page_moderation_card_all_accounts_description()}
 					icon="group"
 					href="/moderation/moderate/accounts" />
 				<HorizontalCard title="IP bans" icon="wifi_off" href="/moderation/moderate/ips" />
