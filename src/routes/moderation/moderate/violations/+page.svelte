@@ -6,11 +6,13 @@
 		Avatar,
 		Button,
 		deleteFetch,
+		Divider,
 		Field,
 		Flex,
 		formatIsoToPreferred,
 		getFetch,
 		Icon,
+		Lozenge,
 		Modal,
 		navigateBack,
 		patchFetch,
@@ -26,20 +28,20 @@
 	let violationsList = $state<any[]>([]);
 	let loading = $state(true);
 
-	let editingViolation = $state<any | undefined>(undefined);
+	let openViolation = $state<any | undefined>(undefined);
 	let editReason = $state("");
 	let editModeratorReason = $state("");
 	let savingEdit = $state(false);
 	let deletingId = $state<string | undefined>(undefined);
 
-	function openEdit(violation: any) {
-		editingViolation = violation;
+	function openDetails(violation: any) {
+		openViolation = violation;
 		editReason = violation.reason;
 		editModeratorReason = violation.moderatorReason ?? "";
 	}
 
 	async function saveEdit() {
-		if (!editingViolation) return;
+		if (!openViolation) return;
 		if (!editReason.trim()) {
 			toast("Reason can't be empty.", undefined, undefined, 3000, "warning");
 			return;
@@ -47,7 +49,7 @@
 
 		savingEdit = true;
 		const res = await patchFetch(
-			`${PUBLIC_BACKEND_URL}/support/moderation/violations/${editingViolation.id}`,
+			`${PUBLIC_BACKEND_URL}/support/moderation/violations/${openViolation.id}`,
 			{ reason: editReason.trim(), moderatorReason: editModeratorReason.trim() || null },
 			undefined,
 			true
@@ -55,7 +57,11 @@
 
 		if (res && res.success) {
 			toast("Violation updated.", undefined, undefined, 2000, "success");
-			editingViolation = undefined;
+			openViolation = {
+				...openViolation,
+				reason: editReason.trim(),
+				moderatorReason: editModeratorReason.trim() || null
+			};
 			await loadAllViolations();
 		} else {
 			toast("Failed to update violation.", undefined, undefined, 2000, "danger");
@@ -77,6 +83,7 @@
 		if (res && res.success) {
 			toast("Violation deleted.", undefined, undefined, 2000, "success");
 			violationsList = violationsList.filter((v) => v.id !== id);
+			openViolation = undefined;
 		} else {
 			toast("Failed to delete violation.", undefined, undefined, 2000, "danger");
 		}
@@ -153,11 +160,11 @@
 			{m.page_platform_violations_description()}
 		</p>
 
-		<Flex gap="medium" height="fit-content" marginBottom="giant" direction="column">
+		<Flex gap="medium" height="fit-content" direction="column">
 			{#if loading}
-				<Skeleton height="5rem" width="100%" />
-				<Skeleton height="5rem" width="100%" />
-				<Skeleton height="5rem" width="100%" />
+				<Skeleton height="4.5rem" width="100%" />
+				<Skeleton height="4.5rem" width="100%" />
+				<Skeleton height="4.5rem" width="100%" />
 			{:else if violationsList.length === 0}
 				<Flex
 					direction="column"
@@ -171,64 +178,72 @@
 				</Flex>
 			{:else}
 				{#each violationsList as violation (violation.id)}
-					<div class="violation-row-card">
-						<Flex justifyContent="spaceBetween" alignItems="center" marginBottom="small">
-							<Flex alignItems="center" gap="small">
+					<button class="row-card" onclick={() => openDetails(violation)}>
+						<Flex justifyContent="spaceBetween" alignItems="start" gap="medium">
+							<Flex alignItems="center" gap="small" style="min-width: 0;">
 								<Avatar size="small" src={violation.avatarUrl ?? ""} alt={violation.username} />
-								<Anchor
-									href="https://account.davidnet.net/profile/{violation.username}"
-									target="_blank">
-									@{violation.username} ({violation.displayName})
-								</Anchor>
+								<Flex direction="column" gap="xsmall" style="min-width: 0;">
+									<strong style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+										@{violation.username} ({violation.displayName})
+									</strong>
+									<span
+										style="font-size: 0.85rem; color: {token.theme.color.text
+											.tertiary}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+										{violation.reason}
+									</span>
+								</Flex>
 							</Flex>
-							<span style="font-size: 0.85rem; opacity: 0.7;">
-								{formatIsoToPreferred(violation.createdAt, true)}
-							</span>
+							<Flex
+								alignItems="center"
+								justifyContent="end"
+								gap="small"
+								flexWrap="wrap"
+								height="fit-content"
+								style="flex-shrink: 0; width: auto;">
+								<Lozenge appearance="default">{violation.reportedType.toUpperCase()}</Lozenge>
+								<span style="font-size: 0.8rem; color: {token.theme.color.text.tertiary}">
+									{formatIsoToPreferred(violation.createdAt, false)}
+								</span>
+							</Flex>
 						</Flex>
-						<p style="margin: 4px 0; font-size: 0.85rem; opacity: 0.6;">
-							<strong>{m.page_platform_violations_violation_id_label()}</strong>
-							{violation.id} |
-							<strong>{m.common_user_id_label({ id: violation.userId })}</strong>
-						</p>
-						<p style="margin: 4px 0; font-size: 0.9rem;">
-							<strong>{m.common_label_type()}</strong>
-							{violation.reportedType.toUpperCase()} |
-							<strong>{m.page_platform_violations_target_id_label()}</strong>
-							{violation.reportedId}
-						</p>
-						<p style="margin: 4px 0; font-size: 0.9rem;">
-							<strong>{m.common_label_reason()}</strong>
-							{violation.reason}
-						</p>
-						{#if violation.moderatorReason}
-							<p style="margin: 4px 0 0 0; font-size: 0.9rem; color: #ffb74d;">
-								<strong>{m.page_platform_violations_mod_note_label()}</strong>
-								{violation.moderatorReason}
-							</p>
-						{/if}
-						<Flex gap="small" marginTop="small" justifyContent="end">
-							<Button onclick={() => openEdit(violation)}>Edit</Button>
-							<Button
-								appearance="danger"
-								loading={deletingId === violation.id}
-								onclick={() => deleteViolation(violation.id)}>
-								Delete
-							</Button>
-						</Flex>
-					</div>
+					</button>
 				{/each}
 			{/if}
 		</Flex>
 	</Flex>
 </Flex>
 
-{#if editingViolation}
+{#if openViolation}
 	<Modal
-		title="Edit violation"
+		title={`[${openViolation.reportedType.toUpperCase()}] @${openViolation.username}`}
 		onclose={() => {
-			editingViolation = undefined;
+			openViolation = undefined;
 		}}>
 		<Flex direction="column" gap="medium" width="100%">
+			<Flex alignItems="center" gap="small">
+				<Avatar size="medium" src={openViolation.avatarUrl ?? ""} alt={openViolation.username} />
+				<Flex direction="column" gap="xsmall">
+					<Anchor href="https://account.davidnet.net/profile/{openViolation.username}" target="_blank">
+						@{openViolation.username}
+					</Anchor>
+					<span style="color: {token.theme.color.text.tertiary}">{openViolation.displayName}</span>
+				</Flex>
+			</Flex>
+
+			<Divider color="tertiary" />
+
+			<Flex direction="column" gap="xsmall">
+				<p style="margin: 0;"><strong>Violation ID:</strong> {openViolation.id}</p>
+				<p style="margin: 0;"><strong>User ID:</strong> {openViolation.userId}</p>
+				<p style="margin: 0;"><strong>Target ID:</strong> {openViolation.reportedId}</p>
+				<p style="margin: 0;">
+					<strong>Issued:</strong>
+					{formatIsoToPreferred(openViolation.createdAt, true)}
+				</p>
+			</Flex>
+
+			<Divider color="tertiary" />
+
 			<Field label="Reason" name="editReason" required>
 				<TextArea bind:value={editReason} rows={3} />
 			</Field>
@@ -241,23 +256,39 @@
 			<Flex gap="small" justifyContent="spaceBetween" width="100%">
 				<Button
 					onclick={() => {
-						editingViolation = undefined;
+						openViolation = undefined;
 					}}>
-					Cancel
+					Close
 				</Button>
-				<Button appearance="danger" loading={savingEdit} onclick={saveEdit}>Save</Button>
+				<Flex gap="small" width="fit-content">
+					<Button
+						appearance="danger"
+						loading={deletingId === openViolation.id}
+						onclick={() => deleteViolation(openViolation.id)}>
+						Delete
+					</Button>
+					<Button appearance="primary" loading={savingEdit} onclick={saveEdit}>Save</Button>
+				</Flex>
 			</Flex>
 		{/snippet}
 	</Modal>
 {/if}
 
 <style>
-	.violation-row-card {
+	.row-card {
 		background: rgba(255, 255, 255, 0.02);
 		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 8px;
-		padding: 16px;
+		padding: 12px 16px;
 		width: 100%;
 		box-sizing: border-box;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+		font: inherit;
+	}
+
+	.row-card:hover {
+		background: rgba(255, 255, 255, 0.05);
 	}
 </style>
