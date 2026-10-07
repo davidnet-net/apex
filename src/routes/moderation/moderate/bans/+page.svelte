@@ -390,7 +390,7 @@
 		<Divider color="tertiary" />
 
 		<h3>{m.page_bans_active_list_heading()}</h3>
-		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap" direction="column">
+		<Flex gap="medium" height="fit-content" marginBottom="giant" direction="column">
 			{#if loading}
 				<Skeleton height="4rem" width="100%" />
 				<Skeleton height="4rem" width="100%" />

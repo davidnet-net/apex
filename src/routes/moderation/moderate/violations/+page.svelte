@@ -153,7 +153,7 @@
 			{m.page_platform_violations_description()}
 		</p>
 
-		<Flex gap="medium" height="fit-content" marginBottom="giant" flexWrap="wrap" direction="column">
+		<Flex gap="medium" height="fit-content" marginBottom="giant" direction="column">
 			{#if loading}
 				<Skeleton height="5rem" width="100%" />
 				<Skeleton height="5rem" width="100%" />

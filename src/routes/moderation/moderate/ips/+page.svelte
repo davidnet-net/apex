@@ -11,10 +11,11 @@
 		formatIsoToPreferred,
 		getFetch,
 		Icon,
-		LinkButton,
 		navigateBack,
 		deleteFetch,
+		postFetch,
 		Skeleton,
+		TextArea,
 		TextField,
 		toast,
 		whenAuthReady
@@ -50,6 +51,9 @@
 	let lookupResults = $state<LinkedUser[]>([]);
 	let lookupLoading = $state(false);
 	let lookupDone = $state(false);
+
+	let banReason = $state("");
+	let banningLookupIp = $state(false);
 
 	$effect(() => {
 		(async () => {
@@ -128,6 +132,29 @@
 		lookupLoading = false;
 		lookupDone = true;
 	}
+
+	async function banLookupIp() {
+		if (!lookupIp.trim()) return;
+		if (!confirm(`IP-ban ${lookupIp.trim()}? This blocks every request from that address across all of Davidnet.`))
+			return;
+
+		banningLookupIp = true;
+		const res = await postFetch(
+			`${PUBLIC_BACKEND_URL}/support/moderation/ips/${encodeURIComponent(lookupIp.trim())}/ban`,
+			{ reason: banReason.trim() || undefined },
+			undefined,
+			true
+		);
+
+		if (res && res.success) {
+			toast("IP banned.", undefined, undefined, 2000, "success");
+			banReason = "";
+			await loadBannedIps();
+		} else {
+			toast("Failed to ban IP.", undefined, undefined, 2000, "danger");
+		}
+		banningLookupIp = false;
+	}
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -144,39 +171,51 @@
 		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; margin-bottom: 16px;">
-			An IP ban blocks every request from that address across the entire backend - not just this
-			one account. Ban an IP from an account's "IPs seen" list on the
-			<LinkButton href="/moderation/moderate/accounts">accounts page</LinkButton>.
+			An IP ban blocks every request from that address across the entire backend - not just one
+			account.
 		</p>
 
 		<div class="action-section">
-			<h4>Who else used this IP?</h4>
-			<Flex gap="small">
-				<TextField bind:value={lookupIp} placeholder="e.g. 203.0.113.42" />
-				<Button loading={lookupLoading} onclick={lookupUsersForIp}>Look up</Button>
-			</Flex>
+			<h4>Look up or ban an IP</h4>
+			<Flex direction="column" gap="small">
+				<Field label="IP address" name="lookupIp">
+					<Flex gap="small">
+						<TextField bind:value={lookupIp} placeholder="e.g. 203.0.113.42" />
+						<Button loading={lookupLoading} onclick={lookupUsersForIp}>Who used this?</Button>
+					</Flex>
+				</Field>
 
-			{#if lookupDone}
-				<Flex direction="column" gap="xsmall" marginTop="small">
-					{#if lookupResults.length === 0}
-						<p style="color: {token.theme.color.text.tertiary}; margin: 0;">
-							No users have connected from this IP.
-						</p>
-					{:else}
-						{#each lookupResults as u (u.userId)}
-							<Flex alignItems="center" gap="small">
-								<Avatar size="small" src={u.avatarUrl ?? ""} alt={u.username} />
-								<Anchor href="https://account.davidnet.net/profile/{u.username}" target="_blank">
-									@{u.username} ({u.displayName})
-								</Anchor>
-								<span style="font-size: 0.8rem; color: {token.theme.color.text.tertiary}">
-									last seen {formatIsoToPreferred(u.lastSeenAt, true)}
-								</span>
-							</Flex>
-						{/each}
-					{/if}
+				{#if lookupDone}
+					<Flex direction="column" gap="xsmall">
+						{#if lookupResults.length === 0}
+							<p style="color: {token.theme.color.text.tertiary}; margin: 0;">
+								No users have connected from this IP.
+							</p>
+						{:else}
+							{#each lookupResults as u (u.userId)}
+								<Flex alignItems="center" gap="small">
+									<Avatar size="small" src={u.avatarUrl ?? ""} alt={u.username} />
+									<Anchor href="https://account.davidnet.net/profile/{u.username}" target="_blank">
+										@{u.username} ({u.displayName})
+									</Anchor>
+									<span style="font-size: 0.8rem; color: {token.theme.color.text.tertiary}">
+										last seen {formatIsoToPreferred(u.lastSeenAt, true)}
+									</span>
+								</Flex>
+							{/each}
+						{/if}
+					</Flex>
+				{/if}
+
+				<Field label="Reason (optional)" name="banReason">
+					<TextArea bind:value={banReason} rows={2} placeholder="Why is this IP being banned?" />
+				</Field>
+				<Flex>
+					<Button appearance="danger" loading={banningLookupIp} onclick={banLookupIp}>
+						Ban this IP
+					</Button>
 				</Flex>
-			{/if}
+			</Flex>
 		</div>
 
 		<Divider color="tertiary" />
