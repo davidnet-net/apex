@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
+
+	import { troubleshooting as troubleshootingDocs } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -12,6 +15,14 @@
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<a href="/help/community-games">← All Community Games topics</a>
 		</p>
+		<Flex height="fit-content">
+			<Button
+				appearance="subtle"
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(troubleshootingDocs, "The Troubleshooting page")}>
+				Copy this page for AI
+			</Button>
+		</Flex>
 
 		<h3 style="margin-top: 1rem;">"My game won't upload"</h3>
 		<ul style="margin: 0; padding-left: 20px; color: {token.theme.color.text.secondary}">

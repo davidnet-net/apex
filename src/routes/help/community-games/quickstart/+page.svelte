@@ -2,6 +2,9 @@
 	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
+	import { quickstart as quickstartDocs } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
+
 	const starter = `// Every one of these functions already exists on window.DavidnetSDK the moment your
 // game loads - there is nothing to install or import, just call them directly.
 
@@ -74,6 +77,14 @@ async function showLeaderboard() {
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<a href="/help/community-games">← All Community Games topics</a>
 		</p>
+		<Flex height="fit-content">
+			<Button
+				appearance="subtle"
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(quickstartDocs, "The Quickstart page")}>
+				Copy this page for AI
+			</Button>
+		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			The fastest way to see this working: upload any zip with an <code>index.html</code> at its

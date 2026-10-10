@@ -2,13 +2,21 @@
 	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
+	import { godot as godotDocs } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
+
 	const bridge = `extends Node
 
 # --- Davidnet SDK bridge for Godot HTML5 exports ---
 # Call this once (e.g. from an autoload's _ready) before using call_sdk() anywhere else.
+var _sdk_ready := false
+
 func _ready() -> void:
 	if not OS.has_feature("web"):
-		return  # this bridge only exists in the HTML5 export, not when running in the editor
+		# Expected in the editor or a non-web export target - warn rather than fail silently,
+		# so a call_sdk() made while testing locally doesn't just look like it did nothing.
+		push_warning("DavidnetSDK bridge: not running in the HTML5 export - SDK calls will be no-ops.")
+		return
 
 	JavaScriptBridge.eval("""
 		window.__dnCall = function(method, argsJson, onResolve, onReject) {
@@ -24,11 +32,17 @@ func _ready() -> void:
 			});
 		};
 	""", true)
+	_sdk_ready = true
 
 
 # Calls any window.DavidnetSDK method - use a dot-path for nested ones, e.g. "realtime.send".
 # on_success receives a parsed Dictionary/Array/primitive, on_error receives an error String.
 func call_sdk(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
+	if not _sdk_ready:
+		push_warning("DavidnetSDK bridge: call_sdk(\\"%s\\") ignored - not running in the HTML5 export." % method)
+		on_error.call("DavidnetSDK is only available in the HTML5 export")
+		return
+
 	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args):
 		on_success.call(JSON.parse_string(cb_args[0]))
 	)
@@ -124,6 +138,14 @@ func _on_realtime_event(event_name: String, data: Dictionary) -> void:
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<a href="/help/community-games">← All Community Games topics</a>
 		</p>
+		<Flex height="fit-content">
+			<Button
+				appearance="subtle"
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(godotDocs, "The Godot / other engines page")}>
+				Copy this page for AI
+			</Button>
+		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			Everything in these docs works no matter what built your game —

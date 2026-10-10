@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
+
+	import { achievements as achievementsDocs } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -12,6 +15,14 @@
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<a href="/help/community-games">← All Community Games topics</a>
 		</p>
+		<Flex height="fit-content">
+			<Button
+				appearance="subtle"
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(achievementsDocs, "The Achievements page")}>
+				Copy this page for AI
+			</Button>
+		</Flex>
 
 		<h3 style="margin-top: 1rem;">
 			<code>DavidnetSDK.unlockAchievement({'{'} id, name, description?, icon?, progress?, target? {'}'})</code>

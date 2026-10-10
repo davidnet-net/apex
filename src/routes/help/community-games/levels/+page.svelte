@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
+
+	import { levels as levelsDocs } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -12,6 +15,14 @@
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<a href="/help/community-games">← All Community Games topics</a>
 		</p>
+		<Flex height="fit-content">
+			<Button
+				appearance="subtle"
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(levelsDocs, "The Community levels page")}>
+				Copy this page for AI
+			</Button>
+		</Flex>
 
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			A generic level-upload system under <code>DavidnetSDK.ugc</code>. Level data is an opaque JSON

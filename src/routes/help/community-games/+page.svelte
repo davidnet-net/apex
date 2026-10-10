@@ -1,7 +1,12 @@
 <script lang="ts">
-	import { Button, Flex, navigateBack } from "@davidnet-net/svelte-ui";
+	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 	import HorizontalCard from "$lib/components/HorizontalCard/HorizontalCard.svelte";
+
+	import { fullDoc } from "$lib/content/communityGamesDocs";
+	import { copyDocsForAi } from "$lib/utils/copyDocsForAi";
+
+	let showFullDoc = $state(false);
 </script>
 
 <Flex alignItems="center" marginTop="giant" direction="column">
@@ -61,47 +66,71 @@
 				title="Quickstart"
 				icon="rocket_launch"
 				href="/help/community-games/quickstart"
-				description="From zero to a working integration: restore progress, save, submit a score, unlock an achievement." />
+				description="From zero to a working integration." />
 			<HorizontalCard
 				title="Highscores & leaderboards"
 				icon="trophy"
 				href="/help/community-games/highscores"
-				description="Submit scores, read the top 10, and run more than one leaderboard per game." />
+				description="Submit scores, read the top 10." />
 			<HorizontalCard
 				title="Save data"
 				icon="save"
 				href="/help/community-games/saves"
-				description="Persist player progress as JSON, with named slots for multiple saves." />
+				description="Persist player progress as JSON." />
 			<HorizontalCard
 				title="Achievements"
 				icon="military_tech"
 				href="/help/community-games/achievements"
-				description="Instant unlocks and progress-bar achievements, plus rarity percentages." />
+				description="Instant unlocks and progress bars." />
 			<HorizontalCard
 				title="Community levels (UGC)"
 				icon="map"
 				href="/help/community-games/levels"
-				description="Let players publish and browse each other's levels/maps as opaque JSON." />
+				description="Let players publish and browse levels." />
 			<HorizontalCard
 				title="Realtime multiplayer"
 				icon="groups"
 				href="/help/community-games/realtime"
-				description="Rooms, shared state, matchmaking queues and lobby-wide announcements." />
+				description="Rooms, matchmaking, and announcements." />
 			<HorizontalCard
 				title="Rate limits"
 				icon="speed"
 				href="/help/community-games/rate-limits"
-				description="How much you can call, how to check your remaining budget, and how to self-throttle." />
+				description="Call budgets and how to self-throttle." />
 			<HorizontalCard
 				title="Godot / other engines"
 				icon="sports_esports"
 				href="/help/community-games/godot"
-				description="Bridging window.DavidnetSDK's JS Promises into GDScript (or another non-JS engine)." />
+				description="Bridging the SDK into GDScript." />
 			<HorizontalCard
 				title="Troubleshooting"
 				icon="build"
 				href="/help/community-games/troubleshooting"
-				description="Common mistakes, upload/zip issues, and what the sandbox actually blocks." />
+				description="Common mistakes and upload issues." />
 		</Flex>
+
+		<h3 style="margin-top: 1rem;">Building with an AI assistant?</h3>
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			Every topic above, concatenated into one reference doc — paste the whole thing into an AI
+			assistant's context and it has everything it needs to build a working integration, including
+			the Godot/GDScript bridge. Each topic page above also has its own "Copy this page for AI"
+			button if you only need one section.
+		</p>
+		<Flex gap="small" height="fit-content" flexWrap="wrap">
+			<Button
+				iconbefore="content_copy"
+				onclick={() => copyDocsForAi(fullDoc, "The full Community Games reference")}>
+				Copy full reference for AI
+			</Button>
+			<Button
+				appearance="subtle"
+				iconbefore={showFullDoc ? "expand_less" : "expand_more"}
+				onclick={() => (showFullDoc = !showFullDoc)}>
+				{showFullDoc ? "Hide full reference" : "Show full reference"}
+			</Button>
+		</Flex>
+		{#if showFullDoc}
+			<CodeSnippet code={fullDoc} language="markdown" filename="davidnet-community-games-sdk.md" />
+		{/if}
 	</Flex>
 </Flex>
