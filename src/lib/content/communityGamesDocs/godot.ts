@@ -14,16 +14,34 @@ get a GDScript-callable handle to \`window\`. The pattern below routes every cal
 JS helper and passes everything as JSON strings both ways, so GDScript only ever deals with normal
 \`Dictionary\`/\`Array\` values via its own \`JSON.parse_string()\`/\`JSON.stringify()\` - no manual
 JS-object property walking needed. Drop this in as an autoload (or anywhere that runs once on boot).
-Note it warns (\`push_warning\`) rather than failing silently when not running in the HTML5 export
-(e.g. testing in the editor), both on boot and on every \`call_sdk\` call made in that state:
+
+Two non-obvious things this bridge handles, found the hard way while building the example project
+below - worth knowing if you ever rewrite this yourself:
+
+- **A call fired the instant the game boots can hang forever with no error.** \`JavaScriptBridge\`
+  callbacks created before the browser has processed a single event-loop tick aren't reliably wired
+  up yet - the real \`window.DavidnetSDK\` method still gets called, but the response never makes it
+  back. The bridge waits one frame plus a small margin before accepting calls, via the \`sdk_ready\`
+  signal.
+- **Several calls fired in the same engine tick don't all come back either** - e.g. two different
+  screens each loading their own data from \`_ready()\`, which is completely normal to want to do.
+  Only some of the simultaneously-created callbacks survive. The bridge queues calls and dispatches
+  them one at a time, waiting for each one to actually resolve before starting the next, so every
+  call site can just fire calls from wherever is natural without knowing any of this.
 
 \`\`\`gdscript
 extends Node
 
+signal sdk_ready
+
+var _web_capable := false
 var _sdk_ready := false
+var _call_queue: Array[Dictionary] = []
+var _draining_queue := false
 
 func _ready() -> void:
-	if not OS.has_feature("web"):
+	_web_capable = OS.has_feature("web")
+	if not _web_capable:
 		push_warning("DavidnetSDK bridge: not running in the HTML5 export - SDK calls will be no-ops.")
 		return
 
@@ -41,24 +59,57 @@ func _ready() -> void:
 			});
 		};
 	""", true)
-	_sdk_ready = true
 
-# Call any window.DavidnetSDK method - dot-path for nested ones, e.g. "realtime.send" with
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
+	_sdk_ready = true
+	sdk_ready.emit()
+
+
+# Calls any window.DavidnetSDK method - dot-path for nested ones, e.g. "realtime.send" with
 # args = [room, data]. on_success receives a parsed Dictionary/Array/primitive, on_error a String.
 func call_sdk(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
-	if not _sdk_ready:
+	if not _web_capable:
 		push_warning("DavidnetSDK bridge: call_sdk(\\"%s\\") ignored - not running in the HTML5 export." % method)
 		on_error.call("DavidnetSDK is only available in the HTML5 export")
 		return
 
-	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args):
+	_call_queue.append({
+		"method": method, "args": args, "on_success": on_success, "on_error": on_error
+	})
+	if not _draining_queue:
+		_drain_queue()
+
+
+func _drain_queue() -> void:
+	_draining_queue = true
+	while not _call_queue.is_empty():
+		if not _sdk_ready:
+			await sdk_ready
+		var request: Dictionary = _call_queue.pop_front()
+		await _dispatch_call(request.method, request.args, request.on_success, request.on_error)
+	_draining_queue = false
+
+
+func _dispatch_call(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
+	var settled := false
+	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
+		settled = true
 		on_success.call(JSON.parse_string(cb_args[0]))
 	)
-	var reject_cb := JavaScriptBridge.create_callback(func(cb_args):
+	var reject_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
+		settled = true
 		on_error.call(cb_args[0])
 	)
 	var window_obj := JavaScriptBridge.get_interface("window")
 	window_obj.__dnCall(method, JSON.stringify(args), resolve_cb, reject_cb)
+
+	var waited := 0.0
+	while not settled and waited < 11.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	if not settled:
+		on_error.call("No response from DavidnetSDK")
 \`\`\`
 
 Usage from anywhere in the project once the above is autoloaded:
@@ -108,7 +159,8 @@ func _on_realtime_event(event_name: String, data: Dictionary) -> void:
 
 By the time a game's own code starts running, \`window.DavidnetSDK\` is already defined - the
 engine's own boot/loading sequence always takes longer than the SDK's setup, so there is no race
-condition to guard against.
+condition to guard against for THAT part specifically (see the two bullets above for the races that
+do matter).
 
 ## Export settings that work (and what doesn't)
 
@@ -146,5 +198,8 @@ JSON-bridge idea still works, but verify exact method names against the 3.x docs
 **Unity (WebGL) and other engines**: find that engine's mechanism for calling into page-level
 JavaScript and receiving a callback back (Unity WebGL uses \`.jslib\` plugin files with
 \`[DllImport("__Internal")]\` extern functions, for example), then apply the same pattern - one small
-JS helper that resolves the Promise and hands the result back as a JSON string.
+JS helper that resolves the Promise and hands the result back as a JSON string. The two races
+described above (callbacks created before the first event-loop tick, and several created in the
+same tick) are Emscripten/browser-level issues, not Godot-specific - the same queueing approach is
+worth carrying over regardless of engine.
 `;

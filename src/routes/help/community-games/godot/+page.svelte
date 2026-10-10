@@ -9,10 +9,16 @@
 
 # --- Davidnet SDK bridge for Godot HTML5 exports ---
 # Call this once (e.g. from an autoload's _ready) before using call_sdk() anywhere else.
+signal sdk_ready
+
+var _web_capable := false
 var _sdk_ready := false
+var _call_queue: Array[Dictionary] = []
+var _draining_queue := false
 
 func _ready() -> void:
-	if not OS.has_feature("web"):
+	_web_capable = OS.has_feature("web")
+	if not _web_capable:
 		# Expected in the editor or a non-web export target - warn rather than fail silently,
 		# so a call_sdk() made while testing locally doesn't just look like it did nothing.
 		push_warning("DavidnetSDK bridge: not running in the HTML5 export - SDK calls will be no-ops.")
@@ -32,25 +38,68 @@ func _ready() -> void:
 			});
 		};
 	""", true)
+
+	# A real browser event-loop tick needs to pass before JavaScriptBridge callbacks created
+	# just above are reliably wired up - a call fired synchronously during boot (e.g. from
+	# another node's own _ready(), which is completely normal) can otherwise hang forever
+	# with no error at all. One frame plus a small margin reliably avoids that.
+	await get_tree().process_frame
+	await get_tree().create_timer(0.2).timeout
 	_sdk_ready = true
+	sdk_ready.emit()
 
 
 # Calls any window.DavidnetSDK method - use a dot-path for nested ones, e.g. "realtime.send".
 # on_success receives a parsed Dictionary/Array/primitive, on_error receives an error String.
+#
+# Calls are queued and dispatched ONE AT A TIME: creating several JavaScriptBridge callbacks in
+# the same engine tick (e.g. two screens each loading their own data from _ready() at once,
+# which is completely normal) doesn't reliably wire all of them up - the ones that lose the race
+# just silently never resolve, no error. Queueing here means every call site stays simple.
 func call_sdk(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
-	if not _sdk_ready:
+	if not _web_capable:
 		push_warning("DavidnetSDK bridge: call_sdk(\\"%s\\") ignored - not running in the HTML5 export." % method)
 		on_error.call("DavidnetSDK is only available in the HTML5 export")
 		return
 
-	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args):
+	_call_queue.append({
+		"method": method, "args": args, "on_success": on_success, "on_error": on_error
+	})
+	if not _draining_queue:
+		_drain_queue()
+
+
+func _drain_queue() -> void:
+	_draining_queue = true
+	while not _call_queue.is_empty():
+		if not _sdk_ready:
+			await sdk_ready
+		var request: Dictionary = _call_queue.pop_front()
+		await _dispatch_call(request.method, request.args, request.on_success, request.on_error)
+	_draining_queue = false
+
+
+func _dispatch_call(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
+	var settled := false
+	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
+		settled = true
 		on_success.call(JSON.parse_string(cb_args[0]))
 	)
-	var reject_cb := JavaScriptBridge.create_callback(func(cb_args):
+	var reject_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
+		settled = true
 		on_error.call(cb_args[0])
 	)
 	var window_obj := JavaScriptBridge.get_interface("window")
-	window_obj.__dnCall(method, JSON.stringify(args), resolve_cb, reject_cb)`;
+	window_obj.__dnCall(method, JSON.stringify(args), resolve_cb, reject_cb)
+
+	# Safety net in case a callback is somehow still lost despite the above (the SDK's own
+	# functions already reject after 10s, so this should rarely if ever actually trigger).
+	var waited := 0.0
+	while not settled and waited < 11.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	if not settled:
+		on_error.call("No response from DavidnetSDK")`;
 
 	const usageHighscore = `func _on_game_over(final_score: int) -> void:
 	call_sdk("applyHighscore", [final_score], _on_highscore_submitted, _on_sdk_error)
@@ -219,6 +268,27 @@ func _on_realtime_event(event_name: String, data: Dictionary) -> void:
 			. Drop this in as an autoload (or anywhere that runs once on boot):
 		</p>
 		<CodeSnippet code={bridge} language="python" filename="davidnet_sdk_bridge.gd" />
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			Two non-obvious things this bridge handles for you, found the hard way while building the
+			example project below — worth knowing if you ever rewrite this yourself:
+		</p>
+		<ul style="margin: 0; padding-left: 20px; color: {token.theme.color.text.secondary}">
+			<li>
+				<strong>A call fired the instant the game boots can hang forever with no error.</strong>
+				 <code>JavaScriptBridge</code> callbacks created before the browser has processed a single
+				event-loop tick aren't reliably wired up yet — the real <code>window.DavidnetSDK</code>
+				 method still gets called, but the response never makes it back. The bridge waits one frame
+				plus a small margin before accepting calls, via the <code>sdk_ready</code> signal.
+			</li>
+			<li>
+				<strong>Several calls fired in the same engine tick don't all come back either</strong>
+				 — e.g. two different screens each loading their own data from <code>_ready()</code>, which
+				is completely normal to want to do. Only some of the simultaneously-created callbacks
+				survive. The bridge queues calls and dispatches them one at a time, waiting for each one to
+				actually resolve before starting the next, so every call site above can just fire calls from
+				wherever is natural without knowing any of this.
+			</li>
+		</ul>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			Shown with Python syntax coloring above since GDScript isn't in the highlighter's language
 			list — the file itself is GDScript (<code>.gd</code>).
