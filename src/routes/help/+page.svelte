@@ -70,6 +70,11 @@
 				href="/help/tickets"
 				description={m.page_help_card_tickets_description()} />
 			<HorizontalCard
+				title={m.page_help_card_community_games_title()}
+				icon="sports_esports"
+				href="/help/community-games"
+				description={m.page_help_card_community_games_description()} />
+			<HorizontalCard
 				icon="person_alert"
 				title={m.page_help_card_moderation_title()}
 				href="/moderation" />
