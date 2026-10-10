@@ -66,47 +66,47 @@
 				title="Quickstart"
 				icon="rocket_launch"
 				href="/help/community-games/quickstart"
-				description="From zero to a working integration." />
+				description="" />
 			<HorizontalCard
 				title="Highscores & leaderboards"
 				icon="trophy"
 				href="/help/community-games/highscores"
-				description="Submit scores, read the top 10." />
+				description="" />
 			<HorizontalCard
 				title="Save data"
 				icon="save"
 				href="/help/community-games/saves"
-				description="Persist player progress as JSON." />
+				description="" />
 			<HorizontalCard
 				title="Achievements"
 				icon="military_tech"
 				href="/help/community-games/achievements"
-				description="Instant unlocks and progress bars." />
+				description="" />
 			<HorizontalCard
 				title="Community levels (UGC)"
 				icon="map"
 				href="/help/community-games/levels"
-				description="Let players publish and browse levels." />
+				description="" />
 			<HorizontalCard
 				title="Realtime multiplayer"
 				icon="groups"
 				href="/help/community-games/realtime"
-				description="Rooms, matchmaking, and announcements." />
+				description="" />
 			<HorizontalCard
 				title="Rate limits"
 				icon="speed"
 				href="/help/community-games/rate-limits"
-				description="Call budgets and how to self-throttle." />
+				description="" />
 			<HorizontalCard
 				title="Godot / other engines"
 				icon="sports_esports"
 				href="/help/community-games/godot"
-				description="Bridging the SDK into GDScript." />
+				description="" />
 			<HorizontalCard
 				title="Troubleshooting"
 				icon="build"
 				href="/help/community-games/troubleshooting"
-				description="Common mistakes and upload issues." />
+				description="" />
 		</Flex>
 
 		<h3 style="margin-top: 1rem;">Building with an AI assistant?</h3>

@@ -115,5 +115,44 @@ setInterval(async () => {
   // e.message is "RATELIMIT" if this specific call was the one that got rejected.
   console.warn("Save failed (possibly rate-limited):", e.message);
 }`} />
+
+		<h3 style="margin-top: 1.5rem;">Signed calls have their own, stricter cooldown</h3>
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			<code>applyHighscore</code>
+			,
+			<code>saveJsonBlob</code>
+			 and <code>unlockAchievement</code> are "signed" calls — each one is cryptographically signed
+			against your current play session as an anti-cheat measure. Separately from the 60/10s budget
+			above, the server accepts <strong>at most one signed submission per session every ~2
+			seconds</strong>, and that cooldown is shared across all three call types together, not tracked
+			per-endpoint. A rejected one comes back with the same <code>"RATELIMIT"</code> rejection as the
+			main budget.
+		</p>
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			This matters because "game over" is a very natural point to want to submit a score, save
+			progress, AND unlock an achievement all at once — but firing all three in the same instant
+			means only the first one survives; the rest get rejected. Space them out instead:
+		</p>
+		<CodeSnippet
+			language="javascript"
+			filename="signed-call-cooldown.js"
+			code={`async function onGameOver(finalScore) {
+  await window.DavidnetSDK.applyHighscore(finalScore).catch((e) => console.warn(e));
+
+  await new Promise((r) => setTimeout(r, 2200));
+  await window.DavidnetSDK.saveJsonBlob({ lastScore: finalScore }).catch((e) => console.warn(e));
+
+  await new Promise((r) => setTimeout(r, 2200));
+  await window.DavidnetSDK.unlockAchievement({ id: "game_over", name: "Finisher" }).catch((e) => console.warn(e));
+}`} />
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			<code>getHighscores</code>
+			,
+			<code>getJsonBlob</code>
+			,
+			<code>getAchievements</code>
+			 and everything under <code>ugc.*</code> are NOT signed and are unaffected by this — only the
+			three calls that mutate anti-cheat-relevant state are.
+		</p>
 	</Flex>
 </Flex>

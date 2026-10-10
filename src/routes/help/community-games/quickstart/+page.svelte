@@ -88,7 +88,7 @@ async function showLeaderboard() {
 
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			The fastest way to see this working: upload any zip with an <code>index.html</code> at its
-			root (see <a href="/games/community/upload">Upload a game</a>), then paste the snippet below
+			root (see <a href="https://home.davidnet.net/games/community/upload">Upload a game</a>), then paste the snippet below
 			into your game's JavaScript and adapt the <code>applySaveData</code>/<code>showMessage</code>/
 			<code>renderLeaderboard</code>
 			 calls to whatever your game actually does. Nothing to install — <code>window.DavidnetSDK</code>
