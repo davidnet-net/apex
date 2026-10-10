@@ -110,6 +110,35 @@ By the time a game's own code starts running, \`window.DavidnetSDK\` is already 
 engine's own boot/loading sequence always takes longer than the SDK's setup, so there is no race
 condition to guard against.
 
+## Export settings that work (and what doesn't)
+
+Davidnet's game-file server does NOT send \`Cross-Origin-Opener-Policy\`/\`Cross-Origin-Embedder-Policy\`
+headers, and won't by default - those headers would also block the documented "load anything from a
+CDN" sandbox behavior for every game, not just yours. That has concrete implications for your Web
+export settings (Project > Export > your Web preset > Options):
+
+- **Thread Support must be OFF.** A threaded export requires \`SharedArrayBuffer\`, which browsers
+  only expose on a cross-origin-isolated page (the headers above). Upload a threaded build and
+  players get a hard "Error: The following features required to run Godot projects on the Web are
+  missing: Cross-Origin Isolation... SharedArrayBuffer..." screen instead of your game. Almost no
+  GDScript-only game actually needs this - it only matters for heavy parallel computation you'd
+  otherwise hand off to Godot's worker threads.
+- **C# / .NET is not supported, full stop** - not a Davidnet limitation, a Godot one: the official
+  .NET/Mono export templates don't ship Web/HTML5 templates at all (checked directly against the
+  official 4.6.3 release assets - the mono template package has Android/iOS/Linux/macOS/Windows
+  templates and zero Web ones). If your project uses any \`.cs\` scripts, Web export isn't available
+  in Godot itself, regardless of this platform. Use GDScript.
+- **GDExtension (native addons) won't work either** - same reasoning: nothing compiles anything for
+  you on upload, and a native addon built for desktop can't run inside the browser's WASM sandbox
+  regardless of what Davidnet does.
+- **The export filename must be \`index.html\`.** Whatever you type as the export path's filename
+  becomes the name of every generated file (\`.html\`, \`.wasm\`, \`.pck\`, \`.js\`) - name it \`index\`,
+  not your project name, or your zip won't have \`index.html\` at its root and the upload will be
+  rejected (see Troubleshooting).
+- **Everything else is fair game** - texture compression settings, canvas resize policy, custom HTML
+  shell, PWA options (though nothing serves a manifest for you inside the iframe, so install prompts
+  won't do much there), all fine. None of it interacts with the sandbox.
+
 **Godot 3.x** uses the older \`JavaScript\` singleton (not \`JavaScriptBridge\`) with a slightly
 different API (e.g. \`JSON.parse(text).result\` instead of \`JSON.parse_string(text)\`) - the same
 JSON-bridge idea still works, but verify exact method names against the 3.x docs, or upgrade to 4.x.

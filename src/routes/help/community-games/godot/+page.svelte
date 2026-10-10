@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, CodeSnippet, Flex, navigateBack } from "@davidnet-net/svelte-ui";
+	import { Button, CodeSnippet, Flex, LinkButton, navigateBack } from "@davidnet-net/svelte-ui";
 	import { token } from "@davidnet-net/svelte-ui/tokens";
 
 	import { godot as godotDocs } from "$lib/content/communityGamesDocs";
@@ -163,6 +163,29 @@ func _on_realtime_event(event_name: String, data: Dictionary) -> void:
 			result back.
 		</p>
 
+		<h3 style="margin-top: 1rem;">Full example project</h3>
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			<strong>Click Rush</strong>
+			 — a complete, working Godot 4.6 game that uses every single feature in these docs
+			(highscores with multiple categories, saves, instant and progress-bar achievements, community
+			levels, and realtime rooms/matchmaking/announcements), built with the bridge below. Grab
+			either the source project (open it in Godot 4.6 and read through it) or the already-exported
+			build (unzip and upload it directly to try it out first).
+		</p>
+		<Flex gap="small" height="fit-content" flexWrap="wrap">
+			<LinkButton
+				href="/downloads/community-games/davidnet-click-rush-source.zip"
+				iconbefore="folder_zip">
+				Download source project (.zip)
+			</LinkButton>
+			<LinkButton
+				href="/downloads/community-games/davidnet-click-rush-web.zip"
+				iconbefore="download"
+				appearance="subtle">
+				Download compiled example (.zip)
+			</LinkButton>
+		</Flex>
+
 		<h3 style="margin-top: 1rem;">Godot 4.x: the <code>JavaScriptBridge</code> singleton</h3>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			Only present in the HTML5 export, not the editor or other export targets:
@@ -226,6 +249,55 @@ func _on_realtime_event(event_name: String, data: Dictionary) -> void:
 			into one GDScript callback:
 		</p>
 		<CodeSnippet code={listenerBridge} language="python" filename="example_realtime_listeners.gd" />
+
+		<h3 style="margin-top: 1.5rem;">Export settings that work (and what doesn't)</h3>
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			Davidnet's game-file server does NOT send <code>Cross-Origin-Opener-Policy</code>/
+			<code>Cross-Origin-Embedder-Policy</code>
+			 headers, and won't by default — those headers would also block the documented "load anything
+			from a CDN" sandbox behavior for every game, not just yours. That has concrete implications for
+			your Web export settings (<strong>Project &gt; Export &gt; your Web preset &gt; Options</strong>):
+		</p>
+		<ul style="margin: 0; padding-left: 20px; color: {token.theme.color.text.secondary}">
+			<li>
+				<strong>Thread Support must be OFF.</strong>
+				 A threaded export requires <code>SharedArrayBuffer</code>, which browsers only expose on a
+				cross-origin-isolated page (the headers above). Upload a threaded build and players get a
+				hard "Error: The following features required to run Godot projects on the Web are missing:
+				Cross-Origin Isolation... SharedArrayBuffer..." screen instead of your game. Almost no
+				GDScript-only game actually needs this — it only matters for heavy parallel computation
+				you'd otherwise hand off to Godot's worker threads.
+			</li>
+			<li>
+				<strong>C# / .NET is not supported, full stop</strong>
+				 — not a Davidnet limitation, a Godot one: the official .NET/Mono export templates don't
+				ship Web/HTML5 templates at all (checked directly against the official 4.6.3 release assets
+				— the mono template package has Android/iOS/Linux/macOS/Windows templates and zero Web
+				ones). If your project uses any <code>.cs</code> scripts, Web export isn't available in
+				Godot itself, regardless of this platform. Use GDScript.
+			</li>
+			<li>
+				<strong>GDExtension (native addons) won't work either</strong>
+				 — same reasoning: nothing compiles anything for you on upload, and a native addon built for
+				desktop can't run inside the browser's WASM sandbox regardless of what Davidnet does.
+			</li>
+			<li>
+				<strong>The export filename must be <code>index.html</code>.</strong>
+				 Whatever you type as the export path's filename becomes the name of every generated file
+				(<code>.html</code>, <code>.wasm</code>, <code>.pck</code>, <code>.js</code>) — name it
+				<code>index</code>
+				, not your project name, or your zip won't have <code>index.html</code> at its root and the
+				upload will be rejected (see
+				<a href="/help/community-games/troubleshooting">Troubleshooting</a>
+				).
+			</li>
+			<li>
+				<strong>Everything else is fair game</strong>
+				 — texture compression settings, canvas resize policy, custom HTML shell, PWA options
+				(though nothing serves a manifest for you inside the iframe, so install prompts won't do
+				much there). None of it interacts with the sandbox.
+			</li>
+		</ul>
 
 		<h3 style="margin-top: 1.5rem;">Godot 3.x</h3>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
