@@ -7,27 +7,13 @@ only engine-specific part is bridging into it, since its functions are plain JS 
 which a non-JS language can't \`await\` directly.
 
 For **Godot 4.x**, use the built-in \`JavaScriptBridge\` singleton (present only in the HTML5 export,
-not the editor or other export targets): \`JavaScriptBridge.eval(code, true)\` to define a JS helper
-once, \`JavaScriptBridge.create_callback(callable)\` to let JS call back into a GDScript \`Callable\`
-(e.g. from a Promise's \`.then()\`/\`.catch()\`), and \`JavaScriptBridge.get_interface("window")\` to
-get a GDScript-callable handle to \`window\`. The pattern below routes every call through one small
-JS helper and passes everything as JSON strings both ways, so GDScript only ever deals with normal
-\`Dictionary\`/\`Array\` values via its own \`JSON.parse_string()\`/\`JSON.stringify()\` - no manual
-JS-object property walking needed. Drop this in as an autoload (or anywhere that runs once on boot).
-
-Two non-obvious things this bridge handles, found the hard way while building the example project
-below - worth knowing if you ever rewrite this yourself:
-
-- **A call fired the instant the game boots can hang forever with no error.** \`JavaScriptBridge\`
-  callbacks created before the browser has processed a single event-loop tick aren't reliably wired
-  up yet - the real \`window.DavidnetSDK\` method still gets called, but the response never makes it
-  back. The bridge waits one frame plus a small margin before accepting calls, via the \`sdk_ready\`
-  signal.
-- **Several calls fired in the same engine tick don't all come back either** - e.g. two different
-  screens each loading their own data from \`_ready()\`, which is completely normal to want to do.
-  Only some of the simultaneously-created callbacks survive. The bridge queues calls and dispatches
-  them one at a time, waiting for each one to actually resolve before starting the next, so every
-  call site can just fire calls from wherever is natural without knowing any of this.
+not the editor or other export targets). The pattern below is deliberately NOT built on
+\`JavaScriptBridge.create_callback()\` for responses - an earlier version of this bridge was, and it
+turned out unreliable in practice: a call's resolve/reject callback could silently never fire even
+though the underlying HTTP request genuinely succeeded, no error, the call just hung forever.
+Instead it polls via \`JavaScriptBridge.eval(code, true)\`'s **return value** - \`eval\` is a plain
+synchronous call/return, there's no async callback registration that can silently fail to be wired
+up. Drop this in as an autoload (or anywhere that runs once on boot):
 
 \`\`\`gdscript
 extends Node
@@ -36,8 +22,7 @@ signal sdk_ready
 
 var _web_capable := false
 var _sdk_ready := false
-var _call_queue: Array[Dictionary] = []
-var _draining_queue := false
+var _next_request_id := 0
 
 func _ready() -> void:
 	_web_capable = OS.has_feature("web")
@@ -46,70 +31,80 @@ func _ready() -> void:
 		return
 
 	JavaScriptBridge.eval("""
-		window.__dnCall = function(method, argsJson, onResolve, onReject) {
+		window.__dnPending = {};
+
+		window.__dnStart = function(method, argsJson, requestId) {
 			var args = JSON.parse(argsJson);
 			var path = method.split(".");
 			var target = window.DavidnetSDK;
 			for (var i = 0; i < path.length - 1; i++) target = target[path[i]];
 			var fn = target[path[path.length - 1]];
 			Promise.resolve(fn.apply(target, args)).then(function(result) {
-				onResolve(JSON.stringify(result === undefined ? null : result));
+				window.__dnPending[requestId] = {
+					success: true,
+					data: JSON.stringify(result === undefined ? null : result)
+				};
 			}).catch(function(err) {
-				onReject(String(err && err.message ? err.message : err));
+				window.__dnPending[requestId] = {
+					success: false,
+					data: String(err && err.message ? err.message : err)
+				};
 			});
+		};
+
+		window.__dnPoll = function(requestId) {
+			var entry = window.__dnPending[requestId];
+			if (!entry) return "";
+			delete window.__dnPending[requestId];
+			return JSON.stringify(entry);
 		};
 	""", true)
 
-	await get_tree().process_frame
-	await get_tree().create_timer(0.2).timeout
 	_sdk_ready = true
 	sdk_ready.emit()
 
 
 # Calls any window.DavidnetSDK method - dot-path for nested ones, e.g. "realtime.send" with
 # args = [room, data]. on_success receives a parsed Dictionary/Array/primitive, on_error a String.
+# Polls once per frame for up to 11s - plenty responsive for a real ~30-40ms round trip, and safe
+# to call from anywhere (including straight from a node's own _ready(), or several calls at once -
+# each has its own request id and polls independently, no shared state between calls).
 func call_sdk(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
 	if not _web_capable:
 		push_warning("DavidnetSDK bridge: call_sdk(\\"%s\\") ignored - not running in the HTML5 export." % method)
 		on_error.call("DavidnetSDK is only available in the HTML5 export")
 		return
 
-	_call_queue.append({
-		"method": method, "args": args, "on_success": on_success, "on_error": on_error
-	})
-	if not _draining_queue:
-		_drain_queue()
+	if not _sdk_ready:
+		await sdk_ready
 
+	_next_request_id += 1
+	var request_id := "r%d" % _next_request_id
 
-func _drain_queue() -> void:
-	_draining_queue = true
-	while not _call_queue.is_empty():
-		if not _sdk_ready:
-			await sdk_ready
-		var request: Dictionary = _call_queue.pop_front()
-		await _dispatch_call(request.method, request.args, request.on_success, request.on_error)
-	_draining_queue = false
-
-
-func _dispatch_call(method: String, args: Array, on_success: Callable, on_error: Callable) -> void:
-	var settled := false
-	var resolve_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
-		settled = true
-		on_success.call(JSON.parse_string(cb_args[0]))
+	JavaScriptBridge.eval(
+		"window.__dnStart(%s, %s, %s);" % [
+			JSON.stringify(method), JSON.stringify(JSON.stringify(args)), JSON.stringify(request_id)
+		],
+		true
 	)
-	var reject_cb := JavaScriptBridge.create_callback(func(cb_args: Array):
-		settled = true
-		on_error.call(cb_args[0])
-	)
-	var window_obj := JavaScriptBridge.get_interface("window")
-	window_obj.__dnCall(method, JSON.stringify(args), resolve_cb, reject_cb)
 
+	var poll_js := "window.__dnPoll(%s)" % JSON.stringify(request_id)
 	var waited := 0.0
-	while not settled and waited < 11.0:
+	while waited < 11.0:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
-	if not settled:
-		on_error.call("No response from DavidnetSDK")
+
+		var raw = JavaScriptBridge.eval(poll_js, true)
+		if typeof(raw) == TYPE_STRING and raw != "":
+			var entry: Dictionary = JSON.parse_string(raw)
+			if entry.get("success", false):
+				on_success.call(JSON.parse_string(entry.get("data", "null")))
+			else:
+				on_error.call(entry.get("data", "Unknown error"))
+			return
+
+	push_warning("DavidnetSDK bridge: call_sdk(\\"%s\\") never got a response - giving up." % method)
+	on_error.call("No response from DavidnetSDK")
 \`\`\`
 
 Usage from anywhere in the project once the above is autoloaded:
@@ -127,40 +122,45 @@ func _on_sdk_error(message: String) -> void:
 \`\`\`
 
 Realtime listeners (\`onMessage\`, \`onMatched\`, ...) fire on their own, not in response to one
-\`call_sdk()\` request - bridge those once with a small JS shim that forwards every event into one
-GDScript callback:
+\`call_sdk()\` request - the same polling idea works for these too: push every event into a JS-side
+array as it happens, and drain that array once per frame from \`_process()\`:
 
 \`\`\`gdscript
 func _ready() -> void:
-	# ... after the __dnCall setup above ...
-	var forward_cb := JavaScriptBridge.create_callback(func(cb_args):
-		var payload = JSON.parse_string(cb_args[0])
-		_on_realtime_event(payload.event, payload.data)
-	)
+	# ... after the __dnStart/__dnPoll setup above ...
 	JavaScriptBridge.eval("""
-		window.__dnForward = function(forwardCb) {
-			window.DavidnetSDK.realtime.onMatched(function(data) {
-				forwardCb(JSON.stringify({ event: "matched", data: data }));
-			});
-			window.DavidnetSDK.realtime.onMessage(function(data) {
-				forwardCb(JSON.stringify({ event: "message", data: data }));
-			});
+		window.__dnRealtimeEvents = [];
+		function __dnPush(eventName) {
+			return function(data) { window.__dnRealtimeEvents.push({ event: eventName, data: data }); };
+		}
+		var rt = window.DavidnetSDK.realtime;
+		rt.onMessage(__dnPush("message"));
+		rt.onMatched(__dnPush("matched"));
+		rt.onPresence(__dnPush("presence"));
+		rt.onState(__dnPush("state"));
+		rt.onAnnouncement(__dnPush("announcement"));
+		window.__dnPollRealtimeEvents = function() {
+			if (window.__dnRealtimeEvents.length === 0) return "";
+			var events = window.__dnRealtimeEvents;
+			window.__dnRealtimeEvents = [];
+			return JSON.stringify(events);
 		};
 	""", true)
-	JavaScriptBridge.get_interface("window").__dnForward(forward_cb)
 
-func _on_realtime_event(event_name: String, data: Dictionary) -> void:
-	match event_name:
-		"matched":
-			_current_room = data.get("room")
-		"message":
-			_apply_opponent_move(data.get("data"))
+func _process(_delta: float) -> void:
+	var raw = JavaScriptBridge.eval("window.__dnPollRealtimeEvents()", true)
+	if typeof(raw) != TYPE_STRING or raw == "":
+		return
+	for payload in JSON.parse_string(raw):
+		match payload.event:
+			"matched":
+				_current_room = payload.data.get("room")
+			"message":
+				_apply_opponent_move(payload.data.get("data"))
 \`\`\`
 
 By the time a game's own code starts running, \`window.DavidnetSDK\` is already defined - the
-engine's own boot/loading sequence always takes longer than the SDK's setup, so there is no race
-condition to guard against for THAT part specifically (see the two bullets above for the races that
-do matter).
+engine's own boot/loading sequence always takes longer than the SDK's setup.
 
 ## Export settings that work (and what doesn't)
 
@@ -191,15 +191,13 @@ export settings (Project > Export > your Web preset > Options):
   shell, PWA options (though nothing serves a manifest for you inside the iframe, so install prompts
   won't do much there), all fine. None of it interacts with the sandbox.
 
-**Godot 3.x** uses the older \`JavaScript\` singleton (not \`JavaScriptBridge\`) with a slightly
-different API (e.g. \`JSON.parse(text).result\` instead of \`JSON.parse_string(text)\`) - the same
-JSON-bridge idea still works, but verify exact method names against the 3.x docs, or upgrade to 4.x.
+**Godot 3.x** uses the older \`JavaScript\` singleton (not \`JavaScriptBridge\`), but has the same
+\`eval()\`-with-a-return-value capability, so the same polling pattern applies - verify exact method
+names against the 3.x docs, or upgrade to 4.x.
 
-**Unity (WebGL) and other engines**: find that engine's mechanism for calling into page-level
-JavaScript and receiving a callback back (Unity WebGL uses \`.jslib\` plugin files with
-\`[DllImport("__Internal")]\` extern functions, for example), then apply the same pattern - one small
-JS helper that resolves the Promise and hands the result back as a JSON string. The two races
-described above (callbacks created before the first event-loop tick, and several created in the
-same tick) are Emscripten/browser-level issues, not Godot-specific - the same queueing approach is
-worth carrying over regardless of engine.
+**Unity (WebGL) and other engines**: find that engine's mechanism for evaluating JS and getting a
+return value back synchronously (Unity WebGL uses \`.jslib\` plugin files with
+\`[DllImport("__Internal")]\` extern functions, which can return values directly), then apply the
+same polling pattern - avoid relying on an async callback/delegate registration mechanism for the
+response if the engine offers one, for the same reason described above.
 `;

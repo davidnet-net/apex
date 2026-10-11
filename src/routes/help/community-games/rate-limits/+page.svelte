@@ -116,43 +116,49 @@ setInterval(async () => {
   console.warn("Save failed (possibly rate-limited):", e.message);
 }`} />
 
-		<h3 style="margin-top: 1.5rem;">Signed calls have their own, stricter cooldown</h3>
+		<h3 style="margin-top: 1.5rem;">Signed calls have their own, stricter cooldown — but only per resource</h3>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<code>applyHighscore</code>
 			,
 			<code>saveJsonBlob</code>
 			 and <code>unlockAchievement</code> are "signed" calls — each one is cryptographically signed
 			against your current play session as an anti-cheat measure. Separately from the 60/10s budget
-			above, the server accepts <strong>at most one signed submission per session every ~2
-			seconds</strong>, and that cooldown is shared across all three call types together, not tracked
-			per-endpoint. A rejected one comes back with the same <code>"RATELIMIT"</code> rejection as the
-			main budget.
+			above, the server accepts <strong>at most one signed submission every ~2 seconds per
+			resource</strong>
+			 — "resource" meaning one specific leaderboard category, one specific save slot, or one
+			specific achievement id. A rejected one comes back with the same <code>"RATELIMIT"</code>
+			 rejection as the main budget.
 		</p>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
-			This matters because "game over" is a very natural point to want to submit a score, save
-			progress, AND unlock an achievement all at once — but firing all three in the same instant
-			means only the first one survives; the rest get rejected. Space them out instead:
+			This is deliberately scoped narrowly so a normal "game over" — submit a score, save progress,
+			AND unlock an achievement all at once — just works, since those are three different resources:
 		</p>
 		<CodeSnippet
 			language="javascript"
 			filename="signed-call-cooldown.js"
 			code={`async function onGameOver(finalScore) {
+  // All three can fire together - different resources, no cooldown collision.
   await window.DavidnetSDK.applyHighscore(finalScore).catch((e) => console.warn(e));
-
-  await new Promise((r) => setTimeout(r, 2200));
   await window.DavidnetSDK.saveJsonBlob({ lastScore: finalScore }).catch((e) => console.warn(e));
-
-  await new Promise((r) => setTimeout(r, 2200));
   await window.DavidnetSDK.unlockAchievement({ id: "game_over", name: "Finisher" }).catch((e) => console.warn(e));
 }`} />
+		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
+			What's still throttled is repeatedly hitting the SAME resource: submitting to the
+			<code>"classic"</code>
+			 category twice within 2 seconds, saving to the <code>"profile"</code> slot twice within 2
+			seconds, or unlocking the same achievement id twice within 2 seconds. Submitting to
+			<code>"classic"</code>
+			 and <code>"speed-run"</code> back to back, or saving to two different slots, is unaffected —
+			those are different resources.
+		</p>
 		<p style="color: {token.theme.color.text.secondary}; max-width: 70ch;">
 			<code>getHighscores</code>
 			,
 			<code>getJsonBlob</code>
 			,
 			<code>getAchievements</code>
-			 and everything under <code>ugc.*</code> are NOT signed and are unaffected by this — only the
-			three calls that mutate anti-cheat-relevant state are.
+			 and everything under <code>ugc.*</code> are NOT signed and are unaffected by this entirely —
+			only the three calls that mutate anti-cheat-relevant state are.
 		</p>
 	</Flex>
 </Flex>
